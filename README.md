@@ -15,12 +15,16 @@ color según qué tan cerca (o vencidas) están sus tareas pendientes.
 
 ```
 src/
+  middleware.ts       # protege las rutas de la app detrás del PIN familiar
   app/
     layout.tsx        # layout raíz, envuelve todo en ProfileProvider
     page.tsx           # pantalla principal (mapa de zonas)
     login/page.tsx      # selección de perfil
     tareas/page.tsx      # panel de administración de tareas
     historial/page.tsx    # historial de tareas completadas
+    pin/page.tsx           # pantalla de PIN familiar
+    api/pin/login/route.ts  # POST: valida el PIN y setea la cookie
+    api/pin/logout/route.ts # POST: borra la cookie del PIN
     globals.css
   components/
     ZoneCard.tsx        # tarjeta clickeable de una zona
@@ -39,6 +43,8 @@ src/
     data.ts                 # funciones de acceso a datos (fetch/insert/update)
     slug.ts                   # genera el id de una tarea nueva a partir de zona+título
     urgency.ts               # funciones puras: cálculo de estado/urgencia/color
+    pinAuth.ts                 # cookie/HMAC del PIN (compartido por API routes y middleware)
+    pinClient.ts                 # helper de cliente para cerrar la sesión de PIN
   types/
     domain.ts                 # tipos compartidos (Profile, Zone, TaskTemplate, ...)
 sql/
@@ -130,18 +136,45 @@ testear y razonar sobre ella.
 | -------------------------------- | ---------------------------------------------- |
 | `NEXT_PUBLIC_SUPABASE_URL`       | URL del proyecto de Supabase                   |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Clave anónima (pública) del proyecto Supabase  |
+| `FAMILY_PIN`                     | PIN familiar que protege el acceso a la app (ver abajo) |
 
-Ambas son públicas (`NEXT_PUBLIC_*`) porque la app corre enteramente en el
-cliente contra la API de Supabase, protegida por las políticas de RLS
-definidas en `sql/schema.sql`.
+Las dos primeras son públicas (`NEXT_PUBLIC_*`) porque la app corre
+enteramente en el cliente contra la API de Supabase, protegida por las
+políticas de RLS definidas en `sql/schema.sql`. `FAMILY_PIN` es **privada a
+propósito** (sin prefijo `NEXT_PUBLIC_`): solo la leen `middleware.ts` y los
+route handlers en `src/app/api/pin/*`, que corren en el servidor — nunca
+llega al bundle del cliente.
+
+## PIN familiar (bloqueo de acceso)
+
+Para que alguien que abra la URL sin conocer el PIN no vea nada de la app,
+`middleware.ts` protege todas las rutas excepto `/pin` y
+`/api/pin/login`/`logout`. Si no hay una cookie válida, redirige a `/pin`.
+
+- **No es autenticación real de Supabase**: es un candado de interfaz a
+  nivel de toda la app, pensado solo para que un visitante casual con la URL
+  no entre sin el PIN. Cualquiera que sepa el PIN sigue entrando como
+  cualquier perfil (el login simbólico no cambia). Las políticas de RLS de
+  Supabase siguen siendo las mismas de siempre.
+- Al enviar el PIN correcto, `POST /api/pin/login` guarda una cookie
+  `HttpOnly`, `SameSite=Lax` (y `Secure` en producción) con un HMAC del PIN
+  (no el PIN en texto plano, para que no quede legible ni en las devtools
+  del navegador). `middleware.ts` recalcula ese mismo HMAC en cada request
+  para validar la cookie.
+- El botón "Salir" del header llama a `POST /api/pin/logout` (borra la
+  cookie) y regresa a `/pin`. Es independiente de "Cambiar" (que solo
+  cambia el perfil activo, sin afectar el PIN).
+- Si `FAMILY_PIN` no está configurada, el middleware deja pasar todo sin
+  pedir PIN (para no bloquear un deploy mal configurado por accidente) —
+  configúrala siempre en producción.
 
 ## Deploy en Vercel
 
 1. Subir el repositorio a GitHub (u otro proveedor soportado por Vercel).
 2. En Vercel, "Add New Project" → importar el repositorio.
-3. En **Environment Variables**, agregar `NEXT_PUBLIC_SUPABASE_URL` y
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY` con los mismos valores que en
-   `.env.local`.
+3. En **Environment Variables**, agregar `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `FAMILY_PIN` con los mismos valores que
+   en `.env.local` (a `FAMILY_PIN` **no** le pongas el prefijo `NEXT_PUBLIC_`).
 4. Deploy. Vercel detecta Next.js automáticamente (build command
    `next build`, output `.next`).
 
