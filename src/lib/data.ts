@@ -24,15 +24,71 @@ export async function fetchZones(): Promise<Zone[]> {
   return data ?? [];
 }
 
+const TASK_TEMPLATE_COLUMNS =
+  "id, zone_id, title, assigned_to, recurrence_type, due_time, active_from, interval_days, active_days, enabled";
+
 export async function fetchTaskTemplates(): Promise<TaskTemplate[]> {
   const { data, error } = await supabase
     .from("task_templates")
-    .select(
-      "id, zone_id, title, assigned_to, recurrence_type, due_time, active_from, interval_days, active_days, enabled"
-    )
+    .select(TASK_TEMPLATE_COLUMNS)
     .eq("enabled", true);
   if (error) throw error;
   return data ?? [];
+}
+
+/** Same as `fetchTaskTemplates` but includes disabled tasks, for the admin screen. */
+export async function fetchAllTaskTemplates(): Promise<TaskTemplate[]> {
+  const { data, error } = await supabase
+    .from("task_templates")
+    .select(TASK_TEMPLATE_COLUMNS)
+    .order("zone_id")
+    .order("title");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export type TaskTemplateInput = Omit<TaskTemplate, "id" | "enabled">;
+
+export async function createTaskTemplate(
+  id: string,
+  input: TaskTemplateInput
+): Promise<TaskTemplate> {
+  const { data, error } = await supabase
+    .from("task_templates")
+    .insert({ id, ...input, enabled: true })
+    .select(TASK_TEMPLATE_COLUMNS)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateTaskTemplate(
+  id: string,
+  input: TaskTemplateInput
+): Promise<TaskTemplate> {
+  const { data, error } = await supabase
+    .from("task_templates")
+    .update(input)
+    .eq("id", id)
+    .select(TASK_TEMPLATE_COLUMNS)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function setTaskTemplateEnabled(
+  id: string,
+  enabled: boolean
+): Promise<void> {
+  // `.select().single()` forces an error when 0 rows match (e.g. an update
+  // silently blocked by RLS) instead of resolving as if it had succeeded.
+  const { error } = await supabase
+    .from("task_templates")
+    .update({ enabled })
+    .eq("id", id)
+    .select("id")
+    .single();
+  if (error) throw error;
 }
 
 /**

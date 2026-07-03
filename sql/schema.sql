@@ -73,6 +73,17 @@ drop policy if exists "task_templates_select_all" on task_templates;
 create policy "task_templates_select_all" on task_templates
   for select using (true);
 
+-- El panel /tareas crea y edita task_templates con la anon key (sin auth
+-- real). A propósito no hay política de delete: las tareas solo se
+-- desactivan (enabled = false), nunca se borran físicamente.
+drop policy if exists "task_templates_insert_all" on task_templates;
+create policy "task_templates_insert_all" on task_templates
+  for insert with check (true);
+
+drop policy if exists "task_templates_update_all" on task_templates;
+create policy "task_templates_update_all" on task_templates
+  for update using (true) with check (true);
+
 drop policy if exists "task_completions_select_all" on task_completions;
 create policy "task_completions_select_all" on task_completions
   for select using (true);
