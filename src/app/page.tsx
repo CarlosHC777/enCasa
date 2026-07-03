@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ZoneCard } from "@/components/ZoneCard";
 import { ZoneModal } from "@/components/ZoneModal";
@@ -88,6 +89,9 @@ export default function HomePage() {
       <header className="app-header">
         <h1>enCasa</h1>
         <div className="profile-badge">
+          <Link href="/tareas" className="link-button">
+            Administrar tareas
+          </Link>
           <span>{activeProfile?.name ?? "…"}</span>
           <button type="button" className="link-button" onClick={handleSwitchProfile}>
             Cambiar
