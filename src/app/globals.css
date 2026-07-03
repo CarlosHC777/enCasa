@@ -537,3 +537,41 @@ button {
   justify-content: flex-end;
   gap: 10px;
 }
+
+.history-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.history-filters .form-field {
+  min-width: 160px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-entry {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--color-surface);
+}
+
+.history-entry-title {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.history-entry-meta {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}

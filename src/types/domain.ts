@@ -33,6 +33,19 @@ export interface TaskCompletion {
   completed_at: string; // ISO timestamp
 }
 
+/** A task_completion with its task/zone/profile names already resolved, for /historial. */
+export interface TaskCompletionHistoryEntry {
+  id: string;
+  completedAt: string; // ISO timestamp
+  completedById: ProfileId;
+  completedByName: string;
+  taskTemplateId: string;
+  taskTitle: string;
+  zoneId: string;
+  zoneName: string;
+  assignedToName: string | null;
+}
+
 export type UrgencyLevel = "green" | "yellow" | "orange" | "red";
 
 export type TaskState = "pending" | "completed" | "overdue";

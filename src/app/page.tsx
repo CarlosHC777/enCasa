@@ -92,6 +92,9 @@ export default function HomePage() {
           <Link href="/tareas" className="link-button">
             Administrar tareas
           </Link>
+          <Link href="/historial" className="link-button">
+            Historial
+          </Link>
           <span>{activeProfile?.name ?? "…"}</span>
           <button type="button" className="link-button" onClick={handleSwitchProfile}>
             Cambiar

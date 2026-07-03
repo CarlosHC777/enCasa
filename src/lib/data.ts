@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 import type {
   Profile,
   TaskCompletion,
+  TaskCompletionHistoryEntry,
   TaskTemplate,
   Zone,
 } from "@/types/domain";
@@ -108,6 +109,54 @@ export async function fetchRecentCompletions(
     .order("completed_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+/**
+ * Fetches the most recent task completions with their task/zone/profile
+ * names already resolved, for the /historial screen. Uses separate queries
+ * instead of a single joined one to keep each query simple and robust.
+ */
+export async function fetchTaskCompletionHistory(
+  limit = 50
+): Promise<TaskCompletionHistoryEntry[]> {
+  const { data: completions, error } = await supabase
+    .from("task_completions")
+    .select("id, task_template_id, completed_by, completed_at")
+    .order("completed_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  if (!completions || completions.length === 0) return [];
+
+  const [tasks, zones, profiles] = await Promise.all([
+    fetchAllTaskTemplates(),
+    fetchZones(),
+    fetchProfiles(),
+  ]);
+
+  const tasksById = new Map(tasks.map((t) => [t.id, t]));
+  const zonesById = new Map(zones.map((z) => [z.id, z]));
+  const profilesById = new Map(profiles.map((p) => [p.id, p]));
+
+  return completions.map((completion) => {
+    const task = tasksById.get(completion.task_template_id);
+    const zone = task ? zonesById.get(task.zone_id) : undefined;
+    const assignedProfile = task?.assigned_to
+      ? profilesById.get(task.assigned_to)
+      : undefined;
+
+    return {
+      id: completion.id,
+      completedAt: completion.completed_at,
+      completedById: completion.completed_by,
+      completedByName:
+        profilesById.get(completion.completed_by)?.name ?? completion.completed_by,
+      taskTemplateId: completion.task_template_id,
+      taskTitle: task?.title ?? completion.task_template_id,
+      zoneId: task?.zone_id ?? "",
+      zoneName: zone?.name ?? "Zona desconocida",
+      assignedToName: assignedProfile?.name ?? null,
+    };
+  });
 }
 
 export async function completeTask(
