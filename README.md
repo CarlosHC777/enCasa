@@ -4,6 +4,12 @@ App web familiar para organizar las tareas diarias de la casa. Pantalla
 principal en forma de mapa de la casa: cada zona es una tarjeta que cambia de
 color según qué tan cerca (o vencidas) están sus tareas pendientes.
 
+Está optimizada para uso principal en celular: header, mapa, modal de zona,
+`/tareas`, el formulario de tareas y `/historial` están pensados primero para
+pantallas chicas (cards grandes, botones de ancho completo, filtros
+apilados), y en pantallas más anchas el mapa se acomoda como un plano de
+casa.
+
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript
