@@ -101,7 +101,7 @@ export default function HomePage() {
         {actionError && <div className="status-banner error">{actionError}</div>}
 
         {!loading && !error && (
-          <div className="zone-grid">
+          <div className="zone-map">
             {zones.map((zone) => {
               const statuses = statusesByZone.get(zone.id) ?? [];
               const urgency = computeZoneUrgency(statuses);

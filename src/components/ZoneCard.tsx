@@ -20,10 +20,11 @@ export function ZoneCard({ zone, urgency, onClick }: ZoneCardProps) {
     <button
       type="button"
       className={`zone-card ${URGENCY_CLASS[urgency]}`}
+      data-zone={zone.id}
       onClick={onClick}
     >
       <span className="dot" aria-hidden />
-      <span>{zone.name}</span>
+      <span className="zone-name">{zone.name}</span>
     </button>
   );
 }

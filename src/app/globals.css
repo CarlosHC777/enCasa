@@ -89,7 +89,7 @@ button {
   font-size: 0.85rem;
 }
 
-.zone-grid {
+.zone-map {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
@@ -97,13 +97,53 @@ button {
 }
 
 @media (min-width: 560px) {
-  .zone-grid {
+  .zone-map {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
+/* Desktop: el mapa de zonas se acomoda como un plano de casa. */
+@media (min-width: 860px) {
+  .container {
+    max-width: 960px;
+  }
+
+  .zone-map {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: 100px 150px 150px;
+    grid-template-areas:
+      "patio-trasero bano pasillo estudio garaje"
+      "cocina comedor comedor sala jardin"
+      "cuarto comedor comedor sala jardin";
+    gap: 6px;
+  }
+
+  .zone-map .zone-card {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 10px 8px;
+  }
+
+  .zone-card[data-zone="patio-trasero"] { grid-area: patio-trasero; }
+  .zone-card[data-zone="bano"] { grid-area: bano; }
+  .zone-card[data-zone="pasillo"] { grid-area: pasillo; }
+  .zone-card[data-zone="estudio"] { grid-area: estudio; }
+  .zone-card[data-zone="garaje"] { grid-area: garaje; }
+  .zone-card[data-zone="cocina"] { grid-area: cocina; }
+  .zone-card[data-zone="comedor"] { grid-area: comedor; }
+  .zone-card[data-zone="sala"] { grid-area: sala; }
+  .zone-card[data-zone="jardin"] { grid-area: jardin; }
+  .zone-card[data-zone="cuarto"] { grid-area: cuarto; }
+
+  .zone-card[data-zone="comedor"] .zone-name,
+  .zone-card[data-zone="sala"] .zone-name {
+    font-size: 1.15rem;
+  }
+}
+
 .zone-card {
-  border: none;
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 20px 12px;
   min-height: 96px;
