@@ -20,6 +20,7 @@ src/
     page.tsx           # pantalla principal (mapa de zonas)
     login/page.tsx      # selección de perfil
     tareas/page.tsx      # panel de administración de tareas
+    historial/page.tsx    # historial de tareas completadas
     globals.css
   components/
     ZoneCard.tsx        # tarjeta clickeable de una zona
@@ -31,6 +32,7 @@ src/
   hooks/
     useHouseData.ts      # fetch de zonas, perfiles, tareas y completions
     useTaskAdminData.ts   # fetch de zonas, perfiles y TODAS las tareas (para /tareas)
+    useTaskHistory.ts      # fetch del historial de completions (para /historial)
     useNow.ts             # reloj que se actualiza cada minuto
   lib/
     supabaseClient.ts     # cliente de Supabase
@@ -171,6 +173,20 @@ corre una sola vez:
 ```bash
 sql/patch-task-template-write-policies.sql
 ```
+
+## Historial de tareas (`/historial`)
+
+El enlace "Historial" (en el mapa y en `/tareas`) lleva a `/historial`, que
+muestra las últimas 50 `task_completions`, más recientes primero, con:
+
+- título de la tarea y zona,
+- quién la completó y cuándo,
+- el responsable original de la tarea (si tiene uno asignado).
+
+Se puede filtrar por persona y por zona (las opciones salen de las propias
+completions cargadas, no de un fetch aparte); el botón "Limpiar filtros"
+resetea ambos. Solo usa la política de lectura de `task_completions` que ya
+existía — no requiere ningún patch de SQL nuevo.
 
 ## Notas / alcance del MVP
 

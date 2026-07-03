@@ -98,6 +98,9 @@ export default function TareasPage() {
           <Link href="/" className="link-button">
             Volver al mapa
           </Link>
+          <Link href="/historial" className="link-button">
+            Historial
+          </Link>
           <span>{activeProfile?.name ?? "…"}</span>
           <button type="button" className="link-button" onClick={handleSwitchProfile}>
             Cambiar
