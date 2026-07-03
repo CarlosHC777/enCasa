@@ -12,6 +12,7 @@ import {
   type TaskTemplateInput,
 } from "@/lib/data";
 import { generateTaskTemplateId } from "@/lib/slug";
+import { logoutPin } from "@/lib/pinClient";
 import { useTaskAdminData } from "@/hooks/useTaskAdminData";
 import type { TaskTemplate } from "@/types/domain";
 
@@ -44,6 +45,11 @@ export default function TareasPage() {
   function handleSwitchProfile() {
     clearActiveProfile();
     router.replace("/login");
+  }
+
+  async function handleLogoutPin() {
+    await logoutPin();
+    router.replace("/pin");
   }
 
   async function handleSave(input: TaskTemplateInput) {
@@ -104,6 +110,9 @@ export default function TareasPage() {
           <span>{activeProfile?.name ?? "…"}</span>
           <button type="button" className="link-button" onClick={handleSwitchProfile}>
             Cambiar
+          </button>
+          <button type="button" className="link-button" onClick={handleLogoutPin}>
+            Salir
           </button>
         </div>
       </header>

@@ -7,6 +7,7 @@ import { ZoneCard } from "@/components/ZoneCard";
 import { ZoneModal } from "@/components/ZoneModal";
 import { useActiveProfile } from "@/context/ProfileContext";
 import { completeTask } from "@/lib/data";
+import { logoutPin } from "@/lib/pinClient";
 import { computeTaskStatus, computeZoneUrgency } from "@/lib/urgency";
 import { useHouseData } from "@/hooks/useHouseData";
 import { useNow } from "@/hooks/useNow";
@@ -80,6 +81,11 @@ export default function HomePage() {
     router.replace("/login");
   }
 
+  async function handleLogoutPin() {
+    await logoutPin();
+    router.replace("/pin");
+  }
+
   if (!ready || !activeProfileId) {
     return null;
   }
@@ -98,6 +104,9 @@ export default function HomePage() {
           <span>{activeProfile?.name ?? "…"}</span>
           <button type="button" className="link-button" onClick={handleSwitchProfile}>
             Cambiar
+          </button>
+          <button type="button" className="link-button" onClick={handleLogoutPin}>
+            Salir
           </button>
         </div>
       </header>

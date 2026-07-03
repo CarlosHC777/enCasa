@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActiveProfile } from "@/context/ProfileContext";
 import { fetchProfiles } from "@/lib/data";
+import { logoutPin } from "@/lib/pinClient";
 import { useTaskHistory } from "@/hooks/useTaskHistory";
 import type { Profile } from "@/types/domain";
 
@@ -72,6 +73,11 @@ export default function HistorialPage() {
     setZoneFilter("");
   }
 
+  async function handleLogoutPin() {
+    await logoutPin();
+    router.replace("/pin");
+  }
+
   if (!ready || !activeProfileId) {
     return null;
   }
@@ -97,6 +103,9 @@ export default function HistorialPage() {
             }}
           >
             Cambiar
+          </button>
+          <button type="button" className="link-button" onClick={handleLogoutPin}>
+            Salir
           </button>
         </div>
       </header>
