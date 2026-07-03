@@ -116,9 +116,9 @@ on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_
 insert into task_templates
   (id, zone_id, title, assigned_to, recurrence_type, due_time, active_from, interval_days, active_days, enabled)
 values
-  ('comedor-levantar-trastes', 'comedor', 'Levantar trastes', null, 'daily', '11:00', '06:00', null, null, true),
-  ('comedor-limpiar-mesa', 'comedor', 'Limpiar mesa', null, 'daily', '11:00', '06:00', null, null, true),
-  ('comedor-limpiar-suelo', 'comedor', 'Limpiar suelo', null, 'every_n_days', null, null, 3, null, true)
+  ('comedor-levantar-trastes', 'comedor', 'Levantar trastes', 'carlitos', 'daily', '11:00', '06:00', null, null, true),
+  ('comedor-limpiar-mesa', 'comedor', 'Limpiar mesa', 'paulina', 'daily', '11:00', '06:00', null, null, true),
+  ('comedor-limpiar-suelo', 'comedor', 'Limpiar suelo', 'papa-angel', 'every_n_days', null, null, 3, null, true)
 on conflict (id) do update set
   zone_id = excluded.zone_id,
   title = excluded.title,

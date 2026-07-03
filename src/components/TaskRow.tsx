@@ -35,7 +35,7 @@ export function TaskRow({
     <div className={`task-card ${urgencyClass}`}>
       <p className="task-title">{task.title}</p>
       <div className="task-meta">
-        <span>Asignado: {assignedName}</span>
+        <span>Responsable: {assignedName}</span>
         {dueLabel && <span>{dueLabel}</span>}
         <span className="task-status">{stateLabel(status.state)}</span>
         <span>{formatTimeRemaining(status, now)}</span>
