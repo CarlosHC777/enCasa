@@ -10,6 +10,16 @@ pantallas chicas (cards grandes, botones de ancho completo, filtros
 apilados), y en pantallas más anchas el mapa se acomoda como un plano de
 casa.
 
+## Estado del release
+
+**v0.2.0 candidate.** Incluye:
+
+- Mapa de casa (`/`)
+- Administración de tareas (`/tareas`)
+- Historial de tareas completadas (`/historial`)
+- PIN familiar (`/pin`)
+- Responsive optimizado para móvil
+
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript
@@ -108,9 +118,16 @@ testear y razonar sobre ella.
    `/tareas`) y los datos semilla (perfiles, zonas y las 3 tareas iniciales
    de Comedor).
 
-   Si ya tenías una base creada con una versión anterior de `schema.sql`,
-   corre además los patches en `sql/` (ver sección "Panel de administración
-   de tareas" más abajo) en vez de recrear las tablas.
+   Si ya tenías una base creada con una versión anterior de `schema.sql`, en
+   vez de recrear las tablas corre los patches en `sql/` que apliquen a tu
+   caso:
+
+   - `patch-assign-initial-responsibles.sql` — asigna responsables
+     (`carlitos`, `paulina`, `papa-angel`) a las 3 tareas semilla del
+     Comedor, si tu base las tiene con `assigned_to = null`.
+   - `patch-task-template-write-policies.sql` — habilita insert/update de
+     `task_templates` para que `/tareas` pueda crear y editar (ver sección
+     "Panel de administración de tareas" más abajo).
 
 3. Copiar el archivo de variables de entorno de ejemplo:
 
@@ -173,6 +190,16 @@ Para que alguien que abra la URL sin conocer el PIN no vea nada de la app,
 - Si `FAMILY_PIN` no está configurada, el middleware deja pasar todo sin
   pedir PIN (para no bloquear un deploy mal configurado por accidente) —
   configúrala siempre en producción.
+
+## Rutas principales
+
+| Ruta          | Qué hace                                                        |
+| ------------- | ---------------------------------------------------------------- |
+| `/pin`        | Candado de PIN familiar; sin cookie válida, todo lo demás redirige aquí |
+| `/login`      | Selección de perfil simbólico (Papá Angel, Mamá Lau, Paulina, Carlitos) |
+| `/`           | Mapa de la casa por zonas, con modal de tareas por zona           |
+| `/tareas`     | Crear, editar, desactivar y reactivar tareas                      |
+| `/historial`  | Últimas 50 tareas completadas, con filtros por persona y zona     |
 
 ## Deploy en Vercel
 

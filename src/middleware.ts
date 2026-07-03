@@ -8,7 +8,12 @@ export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
 
-const PUBLIC_PATHS = new Set(["/pin", "/api/pin/login", "/api/pin/logout"]);
+const PUBLIC_PATHS = new Set([
+  "/pin",
+  "/api/pin/login",
+  "/api/pin/logout",
+  "/icon.svg",
+]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

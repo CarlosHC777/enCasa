@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "enCasa",
-  description: "Organiza las tareas diarias de la casa en familia",
+  description: "Organización familiar de tareas del hogar",
 };
 
 export const viewport: Viewport = {
