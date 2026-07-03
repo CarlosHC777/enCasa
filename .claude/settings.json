@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(inkscape icon.svg --export-type=png --export-filename=preview-32.png -w 32 -h 32)",
+      "Bash(inkscape icon.svg --export-type=png --export-filename=preview-16.png -w 16 -h 16)",
+      "Bash(convert preview-16.png -scale 400% preview-16-zoomed.png)",
+      "Bash(convert preview-32.png -scale 400% preview-32-zoomed.png)",
+      "Bash(curl -s -o /dev/null -w \"status: %{http_code}\\\\n\" http://localhost:3000/favicon.ico)",
+      "Bash(curl -s -o /dev/null -D - http://localhost:3000/icon.svg)",
+      "Bash(curl -s -o /dev/null -D - http://localhost:3000/favicon.ico)",
+      "Bash(curl -s http://localhost:3000/pin)",
+      "Bash(node verify-release.js)"
+    ]
+  }
+}
