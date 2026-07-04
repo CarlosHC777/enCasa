@@ -159,9 +159,13 @@ export default function TareasPage() {
                   const assignedName = task.assigned_to
                     ? profilesById.get(task.assigned_to)?.name ?? task.assigned_to
                     : "Cualquiera";
+                  const horarios =
+                    task.due_times && task.due_times.length > 0
+                      ? task.due_times.join(", ")
+                      : task.due_time ?? "";
                   const recurrenceLabel =
                     task.recurrence_type === "daily"
-                      ? `Diaria${task.due_time ? ` · hasta las ${task.due_time}` : ""}`
+                      ? `Diaria${horarios ? ` · horarios ${horarios}` : ""}`
                       : `Cada ${task.interval_days ?? "?"} día${task.interval_days === 1 ? "" : "s"}`;
 
                   return (

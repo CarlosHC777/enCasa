@@ -22,11 +22,13 @@ create table if not exists task_templates (
   title text not null,
   assigned_to text references profiles(id) on delete set null,
   recurrence_type text not null check (recurrence_type in ('daily', 'every_n_days')),
-  due_time text,          -- "HH:MM", usado por tareas daily
-  active_from text,       -- "HH:MM", usado por tareas daily
+  due_times text[],       -- "HH:MM"[], horarios de vencimiento de tareas daily (fuente de verdad)
+  due_time text,          -- "HH:MM", legacy (primer horario, por compatibilidad)
+  active_from text,       -- "HH:MM", legacy/deprecated
   interval_days int,      -- usado por tareas every_n_days
   active_days int[],      -- 0 (domingo) - 6 (sábado); null/[] = todos los días
-  enabled boolean not null default true
+  enabled boolean not null default true,
+  created_at timestamptz not null default now()  -- no se consideran vencimientos previos a esta fecha
 );
 
 create table if not exists task_completions (
@@ -143,16 +145,17 @@ on conflict (id) do update set name = excluded.name, sort_order = excluded.sort_
 -- ============================================================
 
 insert into task_templates
-  (id, zone_id, title, assigned_to, recurrence_type, due_time, active_from, interval_days, active_days, enabled)
+  (id, zone_id, title, assigned_to, recurrence_type, due_times, due_time, active_from, interval_days, active_days, enabled)
 values
-  ('comedor-levantar-trastes', 'comedor', 'Levantar trastes', 'carlitos', 'daily', '11:00', '06:00', null, null, true),
-  ('comedor-limpiar-mesa', 'comedor', 'Limpiar mesa', 'paulina', 'daily', '11:00', '06:00', null, null, true),
-  ('comedor-limpiar-suelo', 'comedor', 'Limpiar suelo', 'papa-angel', 'every_n_days', null, null, 3, null, true)
+  ('comedor-levantar-trastes', 'comedor', 'Levantar trastes', 'carlitos', 'daily', array['11:00'], '11:00', null, null, null, true),
+  ('comedor-limpiar-mesa', 'comedor', 'Limpiar mesa', 'paulina', 'daily', array['11:00'], '11:00', null, null, null, true),
+  ('comedor-limpiar-suelo', 'comedor', 'Limpiar suelo', 'papa-angel', 'every_n_days', null, null, null, 3, null, true)
 on conflict (id) do update set
   zone_id = excluded.zone_id,
   title = excluded.title,
   assigned_to = excluded.assigned_to,
   recurrence_type = excluded.recurrence_type,
+  due_times = excluded.due_times,
   due_time = excluded.due_time,
   active_from = excluded.active_from,
   interval_days = excluded.interval_days,

@@ -19,11 +19,15 @@ export interface TaskTemplate {
   title: string;
   assigned_to: ProfileId | null;
   recurrence_type: RecurrenceType;
-  due_time: string | null; // "HH:MM"
-  active_from: string | null; // "HH:MM"
+  /** Múltiples horarios de vencimiento diario, "HH:MM". Fuente de verdad para tareas daily. */
+  due_times: string[] | null;
+  due_time: string | null; // "HH:MM" (legacy; primer horario por compatibilidad)
+  active_from: string | null; // "HH:MM" (legacy/deprecated)
   interval_days: number | null;
   active_days: number[] | null; // 0 (Sunday) - 6 (Saturday)
   enabled: boolean;
+  /** Fecha de creación; los vencimientos anteriores a esta fecha no se consideran. */
+  created_at: string | null; // ISO timestamp
 }
 
 export interface TaskCompletion {
@@ -62,6 +66,10 @@ export interface TaskStatus {
   progress: number;
   state: TaskState;
   dueAt: Date | null;
+  /** Próximo vencimiento pendiente cuando la tarea aún no está vencida. */
+  nextDueAt: Date | null;
+  /** Momento del vencimiento incumplido cuando la tarea está vencida. */
+  overdueSince: Date | null;
   activeFrom: Date | null;
   lastCompletion: TaskCompletion | null;
   daysSinceLastCompletion: number | null;

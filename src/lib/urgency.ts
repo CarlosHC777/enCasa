@@ -78,6 +78,159 @@ export function daysSince(date: Date, now: Date): number {
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Normaliza los horarios de vencimiento de una tarea daily. Prioriza
+ * `due_times`; si está vacío usa `due_time` legacy como único horario.
+ * Devuelve horarios "HH:MM" únicos y ordenados ascendentemente.
+ */
+export function normalizeDueTimes(
+  task: Pick<TaskTemplate, "due_times" | "due_time">
+): string[] {
+  const source =
+    task.due_times && task.due_times.length > 0
+      ? task.due_times
+      : task.due_time
+        ? [task.due_time]
+        : [];
+  const unique = Array.from(new Set(source.filter(Boolean)));
+  // Los "HH:MM" con ceros a la izquierda ordenan correctamente de forma léxica.
+  return unique.sort();
+}
+
+/**
+ * Genera los primeros `count` vencimientos programados estrictamente
+ * posteriores a `anchor`, respetando `active_days` (null/[] = todos los días).
+ */
+function generateDailyDues(
+  anchor: Date,
+  dueTimes: string[],
+  activeDays: number[] | null,
+  count: number
+): Date[] {
+  if (dueTimes.length === 0 || count <= 0) return [];
+  const result: Date[] = [];
+  const day = startOfDay(anchor);
+  const anchorMs = anchor.getTime();
+  const allDays = !activeDays || activeDays.length === 0;
+  let guard = 0;
+  const maxGuard = count * dueTimes.length + 800; // tope de seguridad
+  while (result.length < count && guard < maxGuard) {
+    guard++;
+    if (allDays || activeDays!.includes(day.getDay())) {
+      for (const t of dueTimes) {
+        const due = timeOnDate(day, t);
+        if (due.getTime() > anchorMs) {
+          result.push(due);
+          if (result.length >= count) break;
+        }
+      }
+    }
+    day.setDate(day.getDate() + 1);
+  }
+  return result;
+}
+
+/**
+ * Estado de una tarea daily con horarios múltiples usando el modelo de
+ * "slots": cada completion posterior al anchor consume un vencimiento y
+ * avanza al siguiente. El tiempo por sí solo nunca avanza el slot, por lo
+ * que una tarea vencida permanece vencida hasta que alguien la completa.
+ */
+function computeDailyStatus(
+  task: TaskTemplate,
+  completions: TaskCompletion[],
+  now: Date
+): TaskStatus {
+  const dueTimes = normalizeDueTimes(task);
+  const lastCompletion = getLatestCompletion(completions);
+
+  // Sin horarios configurados: no hay urgencia, tratar como verde sin crashear.
+  if (dueTimes.length === 0) {
+    return {
+      task,
+      completed: false,
+      applicableToday: true,
+      urgency: "green",
+      progress: 0,
+      state: "pending",
+      dueAt: null,
+      nextDueAt: null,
+      overdueSince: null,
+      activeFrom: null,
+      lastCompletion,
+      daysSinceLastCompletion: null,
+    };
+  }
+
+  // Anchor = creación de la tarea, acotado a la ventana de historial (30 días)
+  // para mantenerlo consistente con las completions disponibles.
+  const createdAt = task.created_at ? new Date(task.created_at) : null;
+  const windowStart = new Date(now.getTime() - 31 * ONE_DAY_MS);
+  const anchor =
+    createdAt && createdAt.getTime() > windowStart.getTime()
+      ? createdAt
+      : windowStart;
+
+  const sortedAsc = [...completions].sort(
+    (a, b) =>
+      new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime()
+  );
+  const consumed = sortedAsc.filter(
+    (c) => new Date(c.completed_at).getTime() > anchor.getTime()
+  ).length;
+
+  const dues = generateDailyDues(
+    anchor,
+    dueTimes,
+    task.active_days ?? null,
+    consumed + 1
+  );
+  const currentDue = dues[consumed] ?? null;
+  const previousDue = consumed > 0 ? dues[consumed - 1] ?? anchor : anchor;
+
+  // No se pudo determinar el próximo vencimiento (caso degenerado): verde.
+  if (!currentDue) {
+    return {
+      task,
+      completed: false,
+      applicableToday: true,
+      urgency: "green",
+      progress: 0,
+      state: "pending",
+      dueAt: null,
+      nextDueAt: null,
+      overdueSince: null,
+      activeFrom: previousDue,
+      lastCompletion,
+      daysSinceLastCompletion: null,
+    };
+  }
+
+  const total = currentDue.getTime() - previousDue.getTime();
+  const elapsed = now.getTime() - previousDue.getTime();
+  const rawProgress = total > 0 ? elapsed / total : 1;
+  const progress = Math.min(Math.max(rawProgress, 0), 1);
+  const isOverdue = now.getTime() >= currentDue.getTime();
+  const urgency = urgencyFromProgress(progress);
+
+  return {
+    task,
+    completed: false,
+    applicableToday: true,
+    urgency,
+    progress,
+    state: isOverdue ? "overdue" : "pending",
+    dueAt: currentDue,
+    nextDueAt: isOverdue ? null : currentDue,
+    overdueSince: isOverdue ? currentDue : null,
+    activeFrom: previousDue,
+    lastCompletion,
+    daysSinceLastCompletion: null,
+  };
+}
+
 /**
  * Computes the live status of a single task instance for "now".
  * `completions` should already be filtered to this task's template id.
@@ -87,58 +240,12 @@ export function computeTaskStatus(
   completions: TaskCompletion[],
   now: Date
 ): TaskStatus {
-  const applicableToday = isDayApplicable(task, now);
-
   if (task.recurrence_type === "daily") {
-    const completed = isCompletedToday(completions, now);
-    const lastCompletion = getLatestCompletion(completions);
-    const activeFrom = task.active_from
-      ? timeOnDate(now, task.active_from)
-      : startOfDay(now);
-    const dueAt = task.due_time
-      ? timeOnDate(now, task.due_time)
-      : (() => {
-          const d = startOfDay(now);
-          d.setHours(23, 59, 0, 0);
-          return d;
-        })();
-
-    if (completed || !applicableToday) {
-      return {
-        task,
-        completed,
-        applicableToday,
-        urgency: null,
-        progress: 0,
-        state: completed ? "completed" : "pending",
-        dueAt,
-        activeFrom,
-        lastCompletion,
-        daysSinceLastCompletion: null,
-      };
-    }
-
-    const totalWindow = dueAt.getTime() - activeFrom.getTime();
-    const elapsed = now.getTime() - activeFrom.getTime();
-    const rawProgress = totalWindow > 0 ? elapsed / totalWindow : 1;
-    const clampedProgress = Math.min(Math.max(rawProgress, 0), 1);
-    const urgency = urgencyFromProgress(clampedProgress);
-
-    return {
-      task,
-      completed: false,
-      applicableToday,
-      urgency,
-      progress: clampedProgress,
-      state: rawProgress >= 1 ? "overdue" : "pending",
-      dueAt,
-      activeFrom,
-      lastCompletion,
-      daysSinceLastCompletion: null,
-    };
+    return computeDailyStatus(task, completions, now);
   }
 
   // every_n_days
+  const applicableToday = isDayApplicable(task, now);
   const intervalDays = task.interval_days ?? 1;
   const lastCompletion = getLatestCompletion(completions);
   const daysSinceLastCompletion = lastCompletion
@@ -162,6 +269,8 @@ export function computeTaskStatus(
       progress: 0,
       state: completedForCycle ? "completed" : "pending",
       dueAt: null,
+      nextDueAt: null,
+      overdueSince: null,
       activeFrom: null,
       lastCompletion,
       daysSinceLastCompletion,
@@ -180,6 +289,8 @@ export function computeTaskStatus(
     progress: clampedProgress,
     state: rawProgress >= 1 ? "overdue" : "pending",
     dueAt: null,
+    nextDueAt: null,
+    overdueSince: null,
     activeFrom: null,
     lastCompletion,
     daysSinceLastCompletion,
@@ -222,6 +333,9 @@ export interface UrgencyVisual {
   progress: number;
   isOverdue: boolean;
   label: string;
+  shortLabel: string;
+  nextDueAt: Date | null;
+  overdueSince: Date | null;
 }
 
 /**
@@ -236,7 +350,26 @@ export function getUrgencyVisual(status: TaskStatus): UrgencyVisual | null {
     progress: status.progress,
     isOverdue: status.state === "overdue",
     label: urgencyDetailLabel(status.urgency),
+    shortLabel: urgencyShortLabel(status.urgency),
+    nextDueAt: status.nextDueAt,
+    overdueSince: status.overdueSince,
   };
+}
+
+/** Formatea un momento como "hoy 6:00 p.m.", "mañana 9:00 a.m." o "lun 9:00 a.m.". */
+export function formatDueMoment(date: Date, now: Date): string {
+  const time = date.toLocaleTimeString("es-MX", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const startNow = startOfDay(now).getTime();
+  const startDate = startOfDay(date).getTime();
+  let prefix: string;
+  if (startDate === startNow) prefix = "hoy";
+  else if (startDate === startNow + ONE_DAY_MS) prefix = "mañana";
+  else if (startDate === startNow - ONE_DAY_MS) prefix = "ayer";
+  else prefix = date.toLocaleDateString("es-MX", { weekday: "short" });
+  return `${prefix} ${time}`;
 }
 
 export function formatTimeRemaining(status: TaskStatus, now: Date): string {

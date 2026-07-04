@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTimeRemaining, getUrgencyVisual } from "@/lib/urgency";
+import { formatDueMoment, formatTimeRemaining, getUrgencyVisual } from "@/lib/urgency";
 import type { Profile, TaskStatus } from "@/types/domain";
 
 interface TaskRowProps {
@@ -23,14 +23,18 @@ export function TaskRow({
     ? profilesById.get(task.assigned_to)?.name ?? task.assigned_to
     : "Cualquiera";
 
-  const dueLabel = task.due_time
-    ? `hasta las ${task.due_time}`
-    : task.recurrence_type === "every_n_days"
-      ? `cada ${task.interval_days} día${task.interval_days === 1 ? "" : "s"}`
-      : "";
-
   const visual = getUrgencyVisual(status);
   const urgencyClass = status.urgency ? `urgency-${status.urgency}` : "urgency-none";
+
+  // Etiqueta principal de vencimiento: "Vencida desde …" o "Próximo vencimiento: …".
+  let dueLine: string | null = null;
+  if (status.overdueSince) {
+    dueLine = `Vencida desde: ${formatDueMoment(status.overdueSince, now)}`;
+  } else if (status.nextDueAt) {
+    dueLine = `Próximo vencimiento: ${formatDueMoment(status.nextDueAt, now)}`;
+  } else if (task.recurrence_type === "every_n_days") {
+    dueLine = formatTimeRemaining(status, now);
+  }
 
   return (
     <div className={`task-card ${urgencyClass}`}>
@@ -47,11 +51,10 @@ export function TaskRow({
       ) : (
         <div className="task-meta">
           <span>Responsable: {assignedName}</span>
-          {dueLabel && <span>{dueLabel}</span>}
+          {dueLine && <span className="task-due">{dueLine}</span>}
           <span className="task-status">
             {visual ? visual.label : "No aplica hoy"}
           </span>
-          {status.applicableToday && <span>{formatTimeRemaining(status, now)}</span>}
         </div>
       )}
 
