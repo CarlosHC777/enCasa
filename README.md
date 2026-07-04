@@ -37,7 +37,8 @@ src/
     page.tsx           # pantalla principal (mapa de zonas)
     login/page.tsx      # selección de perfil
     score/page.tsx        # score diario en barras de progreso
-    tareas/page.tsx      # panel de administración de tareas
+    mi-tablero/page.tsx    # tablero de tareas del perfil activo
+    tareas/page.tsx      # panel de administración de tareas (búsqueda + orden)
     historial/page.tsx    # historial de tareas completadas
     pin/page.tsx           # pantalla de PIN familiar
     api/pin/login/route.ts  # POST: valida el PIN y setea la cookie
@@ -51,6 +52,7 @@ src/
     UrgencyLegend.tsx        # leyenda de colores del mapa (Bien/Próxima/Urgente/Vencida)
     Clock.tsx                 # reloj visible (hora + fecha) en la pantalla principal
     DailyScoreBoard.tsx        # score diario (casa + personas) en barras de progreso
+    BoardTaskCard.tsx           # tarjeta de tarea del tablero por perfil (/mi-tablero)
   context/
     ProfileContext.tsx   # perfil activo, persistido en localStorage
   hooks/
@@ -64,6 +66,7 @@ src/
     data.ts                 # funciones de acceso a datos (fetch/insert/update)
     slug.ts                   # genera el id de una tarea nueva a partir de zona+título
     urgency.ts               # funciones puras: cálculo de estado/urgencia/color
+    schedule.ts               # funciones puras: ocurrencias diarias, ventana de gracia, covered_due_at
     dailyScore.ts             # funciones puras: ocurrencias y score diario
     pinAuth.ts                 # cookie/HMAC del PIN (compartido por API routes y middleware)
     pinClient.ts                 # helper de cliente para cerrar la sesión de PIN
@@ -77,6 +80,7 @@ sql/
   patch-add-floor-zones.sql                       # agrega las zonas de 1er/2do piso
   patch-add-escaleras-servicio-piso1.sql            # agrega la escalera de servicio del 1er piso
   patch-task-due-times.sql                        # agrega due_times[] y created_at (horarios múltiples)
+  patch-completion-covered-due-at.sql             # agrega covered_due_at a task_completions (gracia 2h)
 ```
 
 La lógica de urgencia vive completamente en `src/lib/urgency.ts` como
@@ -99,17 +103,17 @@ testear y razonar sobre ella.
 
 - **daily** con **horarios múltiples de vencimiento** (`due_times`): una tarea
   diaria puede vencer varias veces al día (ej. `09:00`, `18:00`, `22:00`).
-  - Modelo de "slots": partiendo de `created_at` (anchor), se generan los
-    vencimientos programados respetando `active_days`. Cada `task_completion`
-    consume un vencimiento y avanza al siguiente horario configurado.
+  - Modelo de "ocurrencias con ventana de gracia" (en `src/lib/schedule.ts`):
+    partiendo de `created_at` (anchor) se generan los vencimientos respetando
+    `active_days`. Cada vencimiento tiene una **ventana de gracia de 2 h**
+    (`dueAt` … `dueAt + 2h`) para poder cubrirlo. Ver la sección "Ventana de
+    gracia" más abajo.
   - El progreso hacia el vencimiento pendiente da el color:
     `< 0.5` → verde · `< 0.75` → amarillo · `< 1` → naranja · `>= 1` → rojo.
-  - **Vencida hasta completar**: el tiempo por sí solo nunca avanza el slot,
-    así que una tarea que pasó su hora de vencimiento **permanece roja** hasta
-    que alguien presiona "Completar". Al completar, avanza al siguiente
-    horario (ej. si vencía 09:00 y se completa 09:35, el próximo es 18:00; si
-    se completa después de las 22:00, el próximo es el siguiente día activo a
-    las 09:00).
+  - La ocurrencia pendiente es la más antigua sin cubrir cuya gracia sigue
+    abierta. Mientras la gracia está abierta y ya pasó la hora, la tarea se ve
+    **roja**; si la gracia expira sin completarse, esa ocurrencia queda
+    **perdida** y la tarea avanza sola al siguiente vencimiento.
   - No hay crash con tareas legacy: si no hay `due_times` se usa `due_time`
     como único horario; si no hay ninguno, la tarea se muestra en verde.
 - **every_n_days**: se calculan los días desde la última `task_completion` y
@@ -188,6 +192,61 @@ render filtrando las completions al día local actual. Al cambiar de día (el
 reloj cruza medianoche y `useNow` actualiza la fecha), las completions de ayer
 dejan de contar y el score arranca de cero automáticamente, sin perder
 historial.
+
+## Ventana de gracia de 2 h y `covered_due_at`
+
+Las tareas diarias con horarios (`due_times`) tienen una **ventana de gracia de
+2 horas** después de cada vencimiento para poder cubrirlo:
+
+- Si una tarea vence a las **09:00**, la ventana válida para cubrir esa
+  ocurrencia va de 09:00 a **11:00**.
+- Completar a las 09:30 cubre la ocurrencia de 09:00 y el siguiente vencimiento
+  visible pasa a ser 18:00.
+- Completar a las 11:30 (ya pasada la gracia de 09:00) **no** cuenta para 09:00:
+  esa ocurrencia queda perdida para el score y la completion cubre la siguiente
+  ocurrencia pendiente (18:00).
+
+Al completar, se guarda en `task_completions.covered_due_at` **qué ocurrencia**
+cubre esa completion. La lógica pura vive en `src/lib/schedule.ts`:
+
+- `computeCoveredDueAt(task, completions, now)` calcula la ocurrencia a cubrir:
+  la vencida sin cubrir más antigua con la gracia aún abierta
+  (`dueAt <= now <= dueAt + 2h`), o si no, la siguiente ocurrencia futura (hoy o
+  el próximo día activo). Devuelve `null` para `every_n_days` o cuando no se
+  puede calcular (completion legacy).
+- `buildDailyOccurrences(...)` genera las ocurrencias y marca cuáles quedaron
+  cubiertas, considerando `covered_due_at` explícito y, para completions
+  antiguas sin ese campo, un emparejamiento compatible por `completed_at`.
+
+El **score diario** usa esto: una ocurrencia del día cuenta como completada si
+está cubierta; si su gracia expiró sin cubrirse, cuenta en el total pero no en
+las completadas (ocurrencia perdida). Una completion cuenta para el día de
+`covered_due_at` si existe; si es `null`, se usa `completed_at` (legacy). Una
+misma completion cubre a lo sumo una ocurrencia, así que nunca se cuenta de más.
+
+## Mi tablero (`/mi-tablero`)
+
+Tablero del **perfil activo**: muestra sólo sus tareas (`enabled = true` y
+`assigned_to` = perfil activo), en **orden cronológico** — las vencidas primero,
+luego por próximo vencimiento, y las que no tienen vencimiento al final. Cada
+tarjeta muestra título, zona, estado (Bien/Próxima/Urgente/Vencida), próximo
+vencimiento o "Vencida desde", los horarios configurados y un botón
+**Completar** (que usa la misma lógica de `covered_due_at`). Si el perfil no
+tiene tareas asignadas, se muestra "No tienes tareas asignadas por ahora". Si no
+hay perfil activo, redirige a `/login`.
+
+## Búsqueda y ordenamiento en `/tareas`
+
+El panel de administración tiene una **barra de búsqueda** (filtra en cliente
+por título, zona, responsable y tipo de recurrencia) y un **select de orden**:
+
+- **Cronológico** (por próximo vencimiento; vencidas primero, sin vencimiento al
+  final), **A-Z**, **Z-A**, **Zona**, **Responsable**, **Activas primero**,
+  **Inactivas primero**.
+
+Se muestra un conteo "Mostrando X de Y tareas" y un botón **Limpiar** que
+resetea búsqueda y orden. Crear/editar/desactivar/reactivar siguen funcionando
+igual.
 
 ## Mapa de la casa (3 pisos)
 
@@ -271,6 +330,11 @@ conservan sus colores/etiquetas de urgencia a cualquier nivel de zoom.
      `task_templates` y migra los datos actuales (`due_times = array[due_time]`).
      La app espera estas columnas; si no corres este patch en una base
      existente, la carga del mapa/tareas fallará. Es idempotente.
+   - `patch-completion-covered-due-at.sql` — **necesario para la ventana de
+     gracia de 2 h**. Agrega `covered_due_at timestamptz` a `task_completions`
+     (más un índice). La app inserta este campo al completar; si no corres el
+     patch en una base existente, completar tareas fallará. Es idempotente y no
+     borra datos.
 
 3. Copiar el archivo de variables de entorno de ejemplo:
 
@@ -341,8 +405,9 @@ Para que alguien que abra la URL sin conocer el PIN no vea nada de la app,
 | `/pin`        | Candado de PIN familiar; sin cookie válida, todo lo demás redirige aquí |
 | `/login`      | Selección de perfil simbólico (Papá Angel, Mamá Lau, Paulina, Carlitos) |
 | `/`           | Mapa de la casa por zonas, con modal de tareas por zona           |
+| `/mi-tablero` | Tareas del perfil activo, en orden cronológico, con botón Completar |
 | `/score`      | Score diario (casa y por persona) en barras de progreso de colores |
-| `/tareas`     | Crear, editar, desactivar y reactivar tareas                      |
+| `/tareas`     | Crear, editar, desactivar y reactivar tareas; con búsqueda y orden |
 | `/historial`  | Últimas 50 tareas completadas, con filtros por persona y zona     |
 
 ## Deploy en Vercel

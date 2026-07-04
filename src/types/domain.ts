@@ -35,6 +35,8 @@ export interface TaskCompletion {
   task_template_id: string;
   completed_by: ProfileId;
   completed_at: string; // ISO timestamp
+  /** Vencimiento que cubre esta completion (ventana de gracia). Null = legacy. */
+  covered_due_at: string | null; // ISO timestamp
 }
 
 /** A task_completion with its task/zone/profile names already resolved, for /historial. */

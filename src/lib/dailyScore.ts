@@ -6,19 +6,12 @@ import type {
   TaskCompletion,
   TaskTemplate,
 } from "@/types/domain";
+import { computeTaskStatus } from "@/lib/urgency";
 import {
-  computeTaskStatus,
+  buildDailyOccurrences,
   isDayApplicable,
-  normalizeDueTimes,
-} from "@/lib/urgency";
-
-function isSameLocalDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
+  isSameLocalDay,
+} from "@/lib/schedule";
 
 /**
  * Genera las ocurrencias de vencimiento de UNA tarea para el día local de
@@ -42,9 +35,6 @@ export function taskOccurrencesToday(
   if (!isDayApplicable(task, now)) return [];
 
   const assignedTo = task.assigned_to;
-  const completionsToday = completionsForTask.filter((c) =>
-    isSameLocalDay(new Date(c.completed_at), now)
-  );
 
   const make = (completed: boolean): DailyScoreOccurrence => ({
     taskId: task.id,
@@ -54,15 +44,19 @@ export function taskOccurrencesToday(
   });
 
   if (task.recurrence_type === "daily") {
-    const occurrences = normalizeDueTimes(task).length;
-    if (occurrences === 0) return []; // sin horarios: no se puede puntuar
-    const completedCount = Math.min(completionsToday.length, occurrences);
-    return Array.from({ length: occurrences }, (_, i) =>
-      make(i < completedCount)
-    );
+    // Ocurrencias del día local; `covered` ya respeta covered_due_at y la
+    // ventana de gracia (una completion cubre a lo sumo una ocurrencia, así
+    // que nunca se cuentan de más). Las ocurrencias no cubiertas cuya gracia
+    // expiró quedan como "perdidas" (cuentan en el total, no en completadas).
+    const { occurrences } = buildDailyOccurrences(task, completionsForTask, now);
+    const today = occurrences.filter((o) => isSameLocalDay(o.dueAt, now));
+    return today.map((o) => make(o.covered));
   }
 
   // every_n_days
+  const completionsToday = completionsForTask.filter((c) =>
+    isSameLocalDay(new Date(c.completed_at), now)
+  );
   if (completionsToday.length > 0) return [make(true)];
   const status = computeTaskStatus(task, completionsForTask, now);
   // `overdue` cubre "vence hoy" (daysSince === interval) y "vencida"

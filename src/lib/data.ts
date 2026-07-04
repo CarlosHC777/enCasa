@@ -108,7 +108,7 @@ export async function fetchRecentCompletions(
 
   const { data, error } = await supabase
     .from("task_completions")
-    .select("id, task_template_id, completed_by, completed_at")
+    .select("id, task_template_id, completed_by, completed_at, covered_due_at")
     .gte("completed_at", since.toISOString())
     .order("completed_at", { ascending: false });
   if (error) throw error;
@@ -165,15 +165,19 @@ export async function fetchTaskCompletionHistory(
 
 export async function completeTask(
   taskTemplateId: string,
-  completedBy: string
+  completedBy: string,
+  coveredDueAt: Date | null = null
 ): Promise<TaskCompletion> {
   const { data, error } = await supabase
     .from("task_completions")
     .insert({
       task_template_id: taskTemplateId,
       completed_by: completedBy,
+      // Ocurrencia cubierta (ventana de gracia). Null para every_n_days o
+      // cuando no se puede calcular; queda como completion legacy.
+      covered_due_at: coveredDueAt ? coveredDueAt.toISOString() : null,
     })
-    .select("id, task_template_id, completed_by, completed_at")
+    .select("id, task_template_id, completed_by, completed_at, covered_due_at")
     .single();
   if (error) throw error;
   return data;

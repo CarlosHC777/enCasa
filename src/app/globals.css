@@ -751,6 +751,96 @@ button {
   margin: 16px 0;
 }
 
+/* Búsqueda y ordenamiento en /tareas. */
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.admin-filters .form-field {
+  flex: 1;
+  min-width: 160px;
+}
+
+.admin-count {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0 0 10px;
+}
+
+/* Tablero por perfil (/mi-tablero). */
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.board-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface);
+}
+
+.board-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.board-card-head .task-title {
+  font-weight: 600;
+  margin: 0;
+}
+
+.board-card-meta {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+/* Píldora de estado (Bien / Próxima / Urgente / Vencida / Completada). */
+.status-pill {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pill-green {
+  background: var(--color-green-bg);
+  color: var(--color-green);
+}
+.pill-yellow {
+  background: var(--color-yellow-bg);
+  color: var(--color-yellow);
+}
+.pill-orange {
+  background: var(--color-orange-bg);
+  color: var(--color-orange);
+}
+.pill-red {
+  background: var(--color-red-bg);
+  color: var(--color-red);
+}
+.pill-none {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
 .admin-toolbar h2 {
   margin: 0;
   font-size: 1.1rem;
