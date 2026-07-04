@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ZoneCard } from "@/components/ZoneCard";
 import { ZoneModal } from "@/components/ZoneModal";
 import { UrgencyLegend } from "@/components/UrgencyLegend";
+import { Clock } from "@/components/Clock";
 import { useActiveProfile } from "@/context/ProfileContext";
 import { completeTask } from "@/lib/data";
 import { logoutPin } from "@/lib/pinClient";
@@ -120,6 +121,9 @@ export default function HomePage() {
       <header className="app-header">
         <h1>enCasa</h1>
         <div className="profile-badge">
+          <Link href="/score" className="link-button">
+            Score
+          </Link>
           <Link href="/tareas" className="link-button">
             Administrar tareas
           </Link>
@@ -137,6 +141,8 @@ export default function HomePage() {
       </header>
 
       <main className="container">
+        <Clock now={now} />
+
         {loading && <div className="status-banner">Cargando la casa…</div>}
         {error && <div className="status-banner error">{error}</div>}
         {actionError && <div className="status-banner error">{actionError}</div>}

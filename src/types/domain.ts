@@ -54,6 +54,32 @@ export type UrgencyLevel = "green" | "yellow" | "orange" | "red";
 
 export type TaskState = "pending" | "completed" | "overdue";
 
+/** Una ocurrencia de vencimiento de una tarea en el día actual, para el score. */
+export interface DailyScoreOccurrence {
+  taskId: string;
+  taskTitle: string;
+  assignedTo: ProfileId; // sólo ocurrencias con responsable entran al score
+  completed: boolean;
+}
+
+export interface PersonDailyScore {
+  profileId: ProfileId;
+  name: string;
+  totalAssignedToday: number;
+  completedToday: number;
+  /** completedToday / totalAssignedToday; null cuando no hay tareas hoy. */
+  percentage: number | null;
+}
+
+export interface DailyScore {
+  house: {
+    totalAssignedToday: number;
+    completedToday: number;
+    percentage: number | null;
+  };
+  people: PersonDailyScore[];
+}
+
 export interface TaskStatus {
   task: TaskTemplate;
   /** Whether the task counts as done for its current cycle (today, or within interval). */
