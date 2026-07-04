@@ -35,7 +35,8 @@ create table if not exists task_completions (
   id uuid primary key default gen_random_uuid(),
   task_template_id text not null references task_templates(id) on delete cascade,
   completed_by text not null references profiles(id),
-  completed_at timestamptz not null default now()
+  completed_at timestamptz not null default now(),
+  covered_due_at timestamptz  -- ocurrencia de vencimiento cubierta (ventana de gracia); null = legacy
 );
 
 create index if not exists task_completions_task_template_id_idx
@@ -43,6 +44,9 @@ create index if not exists task_completions_task_template_id_idx
 
 create index if not exists task_completions_completed_at_idx
   on task_completions(completed_at);
+
+create index if not exists task_completions_task_covered_due_at_idx
+  on task_completions(task_template_id, covered_due_at);
 
 -- ============================================================
 -- Row Level Security

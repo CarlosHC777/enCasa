@@ -12,6 +12,7 @@ import { completeTask } from "@/lib/data";
 import { logoutPin } from "@/lib/pinClient";
 import { DEFAULT_FLOOR_ID, FLOOR_PLANS, type FloorId } from "@/lib/floorPlans";
 import { computeTaskStatus, computeZoneUrgency } from "@/lib/urgency";
+import { computeCoveredDueAt } from "@/lib/schedule";
 import { useHouseData } from "@/hooks/useHouseData";
 import { useNow } from "@/hooks/useNow";
 import type { TaskStatus, Zone } from "@/types/domain";
@@ -91,7 +92,14 @@ export default function HomePage() {
     setCompletingTaskId(taskTemplateId);
     setActionError(null);
     try {
-      await completeTask(taskTemplateId, activeProfileId);
+      const task = tasks.find((t) => t.id === taskTemplateId);
+      const taskCompletions = completions.filter(
+        (c) => c.task_template_id === taskTemplateId
+      );
+      const coveredDueAt = task
+        ? computeCoveredDueAt(task, taskCompletions, now)
+        : null;
+      await completeTask(taskTemplateId, activeProfileId, coveredDueAt);
       refresh();
     } catch (err) {
       setActionError(
@@ -121,6 +129,9 @@ export default function HomePage() {
       <header className="app-header">
         <h1>enCasa</h1>
         <div className="profile-badge">
+          <Link href="/mi-tablero" className="link-button">
+            Mi tablero
+          </Link>
           <Link href="/score" className="link-button">
             Score
           </Link>
