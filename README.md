@@ -61,12 +61,15 @@ src/
     urgency.ts               # funciones puras: cálculo de estado/urgencia/color
     pinAuth.ts                 # cookie/HMAC del PIN (compartido por API routes y middleware)
     pinClient.ts                 # helper de cliente para cerrar la sesión de PIN
+    floorPlans.ts                 # qué zonas van en cada piso del selector del mapa
   types/
     domain.ts                 # tipos compartidos (Profile, Zone, TaskTemplate, ...)
 sql/
   schema.sql                                   # creación de tablas, RLS y datos semilla
   patch-assign-initial-responsibles.sql          # asigna responsables a las tareas seed
   patch-task-template-write-policies.sql          # habilita insert/update de task_templates
+  patch-add-floor-zones.sql                       # agrega las zonas de 1er/2do piso
+  patch-add-escaleras-servicio-piso1.sql            # agrega la escalera de servicio del 1er piso
 ```
 
 La lógica de urgencia vive completamente en `src/lib/urgency.ts` como
@@ -99,6 +102,37 @@ testear y razonar sobre ella.
   aplicables hoy (rojo > naranja > amarillo > verde). Si no tiene tareas
   pendientes, la zona se muestra en verde.
 
+## Mapa de la casa (3 pisos)
+
+El mapa (`/`) tiene un selector para cambiar entre tres vistas — **Planta
+baja**, **1er piso** y **2do piso** —, cada una con su propio plano tipo
+casa en desktop (grid con áreas nombradas) y una cuadrícula simple de cards
+en móvil. La configuración de qué zonas pertenecen a cada piso y en qué
+orden vive en `src/lib/floorPlans.ts`; el layout visual (quién es grande,
+quién va arriba/abajo) vive en `globals.css` (clases `.zone-map--planta-baja`,
+`.zone-map--piso-1`, `.zone-map--piso-2`).
+
+- **Planta baja** reutiliza las zonas que ya existían: `patio-trasero`,
+  `bano`, `estudio`, `garaje`, `cocina`, `comedor`, `sala`, `jardin`. Se le
+  agregó `escaleras-pb` ("Escaleras (PB)").
+- **1er piso** reutiliza `pasillo` como su franja central, y agrega
+  `bano-p1`, `escaleras-p1`, `librero`, `cuarto-papas`, `cuarto-carlitos`,
+  `cuarto-paulina`, `terraza`. Tiene **dos escaleras distintas**:
+  `escaleras-p1` (principal, junto a Librero) y `escaleras-p1-servicio`
+  (secundaria, junto a Cuarto Carlitos) — no son la misma zona duplicada,
+  son dos tramos de escalera físicamente distintos.
+- **2do piso** es enteramente nuevo: `cuarto-servicio`, `bano-p2`, `azotea`,
+  `escaleras-p2`.
+- La zona genérica `cuarto` (del seed original) **ya no aparece en ningún
+  plano** — no encajaba con el nuevo layout de pisos. No se borró (por si
+  tiene tareas o historial asociado); simplemente no está en la lista de
+  ninguno de los `FLOOR_PLANS`. Sigue siendo utilizable desde `/tareas` si
+  hace falta, solo que no se ve en el mapa.
+
+Si agregas una zona nueva directamente en Supabase sin agregarla también a
+`src/lib/floorPlans.ts`, aparecerá en `/tareas` y `/historial` pero no en
+ningún plano del mapa — es una limitación conocida, no un bug.
+
 ## Requisitos previos
 
 - Node.js 18.18+ (recomendado 20+)
@@ -128,6 +162,13 @@ testear y razonar sobre ella.
    - `patch-task-template-write-policies.sql` — habilita insert/update de
      `task_templates` para que `/tareas` pueda crear y editar (ver sección
      "Panel de administración de tareas" más abajo).
+   - `patch-add-floor-zones.sql` — agrega las zonas de 1er y 2do piso (y
+     "Escaleras (PB)" de planta baja) que usa el selector de pisos del mapa
+     (ver sección "Mapa de la casa" más arriba). Solo hace `insert ... on
+     conflict do update`, no borra zonas existentes.
+   - `patch-add-escaleras-servicio-piso1.sql` — agrega la escalera
+     secundaria/de servicio del 1er piso (junto a Cuarto Carlitos), aparte
+     de la escalera principal (`escaleras-p1`, junto a Librero).
 
 3. Copiar el archivo de variables de entorno de ejemplo:
 

@@ -106,11 +106,40 @@ button {
   }
 }
 
+.floor-switcher {
+  display: flex;
+  gap: 6px;
+  margin-top: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.floor-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  padding: 10px 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.floor-tab.active {
+  background: var(--color-text);
+  color: white;
+}
+
 .zone-map {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 @media (min-width: 560px) {
@@ -119,19 +148,13 @@ button {
   }
 }
 
-/* Desktop: el mapa de zonas se acomoda como un plano de casa. */
+/* Desktop: cada piso se acomoda como su propio plano de casa. */
 @media (min-width: 860px) {
   .container {
     max-width: 960px;
   }
 
   .zone-map {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: 100px 150px 150px;
-    grid-template-areas:
-      "patio-trasero bano pasillo estudio garaje"
-      "cocina comedor comedor sala jardin"
-      "cuarto comedor comedor sala jardin";
     gap: 6px;
   }
 
@@ -142,20 +165,72 @@ button {
     padding: 10px 8px;
   }
 
-  .zone-card[data-zone="patio-trasero"] { grid-area: patio-trasero; }
-  .zone-card[data-zone="bano"] { grid-area: bano; }
-  .zone-card[data-zone="pasillo"] { grid-area: pasillo; }
-  .zone-card[data-zone="estudio"] { grid-area: estudio; }
-  .zone-card[data-zone="garaje"] { grid-area: garaje; }
-  .zone-card[data-zone="cocina"] { grid-area: cocina; }
-  .zone-card[data-zone="comedor"] { grid-area: comedor; }
-  .zone-card[data-zone="sala"] { grid-area: sala; }
-  .zone-card[data-zone="jardin"] { grid-area: jardin; }
-  .zone-card[data-zone="cuarto"] { grid-area: cuarto; }
-
-  .zone-card[data-zone="comedor"] .zone-name,
-  .zone-card[data-zone="sala"] .zone-name {
+  /* Planta baja */
+  .zone-map--planta-baja {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: 100px 200px;
+    grid-template-areas:
+      "patio-trasero bano escaleras-pb estudio garaje"
+      "cocina comedor comedor sala jardin";
+  }
+  .zone-map--planta-baja .zone-card[data-zone="patio-trasero"] { grid-area: patio-trasero; }
+  .zone-map--planta-baja .zone-card[data-zone="bano"] { grid-area: bano; }
+  .zone-map--planta-baja .zone-card[data-zone="escaleras-pb"] { grid-area: escaleras-pb; }
+  .zone-map--planta-baja .zone-card[data-zone="estudio"] { grid-area: estudio; }
+  .zone-map--planta-baja .zone-card[data-zone="garaje"] { grid-area: garaje; }
+  .zone-map--planta-baja .zone-card[data-zone="cocina"] { grid-area: cocina; }
+  .zone-map--planta-baja .zone-card[data-zone="comedor"] { grid-area: comedor; }
+  .zone-map--planta-baja .zone-card[data-zone="sala"] { grid-area: sala; }
+  .zone-map--planta-baja .zone-card[data-zone="jardin"] { grid-area: jardin; }
+  .zone-map--planta-baja .zone-card[data-zone="comedor"] .zone-name,
+  .zone-map--planta-baja .zone-card[data-zone="sala"] .zone-name {
     font-size: 1.15rem;
+  }
+
+  /* 1er piso */
+  .zone-map--piso-1 {
+    grid-template-columns: 0.6fr repeat(4, minmax(0, 1fr));
+    grid-template-rows: 110px 64px 110px 56px;
+    grid-template-areas:
+      "bano-p1               bano-p1         escaleras-p1    librero        cuarto-papas"
+      "bano-p1               bano-p1         pasillo         pasillo        cuarto-papas"
+      ".                     cuarto-carlitos cuarto-carlitos cuarto-paulina terraza"
+      "escaleras-p1-servicio cuarto-carlitos cuarto-carlitos cuarto-paulina terraza";
+  }
+  .zone-map--piso-1 .zone-card[data-zone="bano-p1"] { grid-area: bano-p1; }
+  .zone-map--piso-1 .zone-card[data-zone="escaleras-p1"] { grid-area: escaleras-p1; }
+  .zone-map--piso-1 .zone-card[data-zone="librero"] { grid-area: librero; }
+  .zone-map--piso-1 .zone-card[data-zone="cuarto-papas"] { grid-area: cuarto-papas; }
+  .zone-map--piso-1 .zone-card[data-zone="pasillo"] { grid-area: pasillo; }
+  .zone-map--piso-1 .zone-card[data-zone="escaleras-p1-servicio"] { grid-area: escaleras-p1-servicio; }
+  .zone-map--piso-1 .zone-card[data-zone="cuarto-carlitos"] { grid-area: cuarto-carlitos; }
+  .zone-map--piso-1 .zone-card[data-zone="cuarto-paulina"] { grid-area: cuarto-paulina; }
+  .zone-map--piso-1 .zone-card[data-zone="terraza"] { grid-area: terraza; }
+  .zone-map--piso-1 .zone-card[data-zone="terraza"] .zone-name {
+    font-size: 1.1rem;
+  }
+  .zone-map--piso-1 .zone-card[data-zone="escaleras-p1-servicio"] .zone-name {
+    font-size: 0.75rem;
+  }
+
+  /* 2do piso */
+  .zone-map--piso-2 {
+    grid-template-columns: 0.6fr 1fr 1.6fr;
+    grid-template-rows: 90px 90px 56px;
+    grid-template-areas:
+      ".            bano-p2         azotea"
+      ".            cuarto-servicio azotea"
+      "escaleras-p2 cuarto-servicio azotea";
+  }
+  .zone-map--piso-2 .zone-card[data-zone="cuarto-servicio"] { grid-area: cuarto-servicio; }
+  .zone-map--piso-2 .zone-card[data-zone="bano-p2"] { grid-area: bano-p2; }
+  .zone-map--piso-2 .zone-card[data-zone="azotea"] { grid-area: azotea; }
+  .zone-map--piso-2 .zone-card[data-zone="escaleras-p2"] { grid-area: escaleras-p2; }
+  .zone-map--piso-2 .zone-card[data-zone="azotea"] .zone-name {
+    font-size: 1.15rem;
+  }
+  .zone-map--piso-2 .zone-card[data-zone="escaleras-p2"] .zone-name {
+    font-size: 0.75rem;
   }
 }
 
