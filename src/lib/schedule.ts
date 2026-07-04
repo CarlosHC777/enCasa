@@ -1,8 +1,10 @@
 import type { TaskCompletion, TaskTemplate } from "@/types/domain";
 
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-/** Ventana de gracia tras cada vencimiento para cubrir esa ocurrencia. */
+/** Ventana de gracia tras cada vencimiento diario para cubrir esa ocurrencia. */
 export const GRACE_MS = 2 * 60 * 60 * 1000;
+/** Días de gracia para tareas every_n_days (además del día de vencimiento). */
+export const EVERY_N_GRACE_DAYS = 1;
 
 export function startOfDay(date: Date): Date {
   const result = new Date(date);
@@ -191,6 +193,52 @@ export function buildDailyOccurrences(
     ) ?? null;
 
   return { occurrences, pending, anchor };
+}
+
+export interface EveryNDaysDue {
+  /** Día (00:00 local) en que la tarea vuelve a tocar. */
+  dueDate: Date;
+  /** Fin de la ventana de gracia = fin del día de vencimiento + EVERY_N_GRACE_DAYS. */
+  graceEndsAt: Date;
+  /** Si la tarea ya tiene al menos una completion previa. */
+  hasHistory: boolean;
+}
+
+/**
+ * Calcula el vencimiento actual de una tarea every_n_days (relativo a la última
+ * completion) y su ventana de gracia de `EVERY_N_GRACE_DAYS` días. Devuelve null
+ * si no aplica (otro tipo o sin intervalo válido).
+ */
+export function everyNDaysDue(
+  task: Pick<
+    TaskTemplate,
+    "recurrence_type" | "interval_days" | "created_at"
+  >,
+  completions: TaskCompletion[],
+  now: Date
+): EveryNDaysDue | null {
+  if (task.recurrence_type !== "every_n_days") return null;
+  const interval = task.interval_days ?? 0;
+  if (interval <= 0) return null;
+
+  let last: TaskCompletion | null = null;
+  for (const c of completions) {
+    if (!last || new Date(c.completed_at) > new Date(last.completed_at)) last = c;
+  }
+
+  let dueDate: Date;
+  if (last) {
+    dueDate = startOfDay(new Date(last.completed_at));
+    dueDate.setDate(dueDate.getDate() + interval);
+  } else {
+    // Nunca completada: se considera vencida desde su creación (o desde hoy).
+    dueDate = startOfDay(task.created_at ? new Date(task.created_at) : now);
+  }
+
+  const graceEndsAt = new Date(
+    startOfDay(dueDate).getTime() + (EVERY_N_GRACE_DAYS + 1) * ONE_DAY_MS
+  );
+  return { dueDate, graceEndsAt, hasHistory: last !== null };
 }
 
 /**
