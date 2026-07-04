@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTimeRemaining, stateLabel } from "@/lib/urgency";
+import { formatTimeRemaining, getUrgencyVisual } from "@/lib/urgency";
 import type { Profile, TaskStatus } from "@/types/domain";
 
 interface TaskRowProps {
@@ -29,17 +29,32 @@ export function TaskRow({
       ? `cada ${task.interval_days} día${task.interval_days === 1 ? "" : "s"}`
       : "";
 
+  const visual = getUrgencyVisual(status);
   const urgencyClass = status.urgency ? `urgency-${status.urgency}` : "urgency-none";
 
   return (
     <div className={`task-card ${urgencyClass}`}>
-      <p className="task-title">{task.title}</p>
-      <div className="task-meta">
-        <span>Responsable: {assignedName}</span>
-        {dueLabel && <span>{dueLabel}</span>}
-        <span className="task-status">{stateLabel(status.state)}</span>
-        <span>{formatTimeRemaining(status, now)}</span>
+      <div className="task-card-header">
+        <p className="task-title">{task.title}</p>
+        {visual && <span className={`dot dot-${visual.status}`} aria-hidden />}
       </div>
+
+      {status.completed ? (
+        <div className="task-meta">
+          <span>Responsable: {assignedName}</span>
+          <span className="task-status">Completada</span>
+        </div>
+      ) : (
+        <div className="task-meta">
+          <span>Responsable: {assignedName}</span>
+          {dueLabel && <span>{dueLabel}</span>}
+          <span className="task-status">
+            {visual ? visual.label : "No aplica hoy"}
+          </span>
+          {status.applicableToday && <span>{formatTimeRemaining(status, now)}</span>}
+        </div>
+      )}
+
       <button
         type="button"
         className="complete-button"

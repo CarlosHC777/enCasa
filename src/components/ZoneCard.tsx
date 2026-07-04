@@ -1,5 +1,6 @@
 "use client";
 
+import { urgencyShortLabel } from "@/lib/urgency";
 import type { UrgencyLevel, Zone } from "@/types/domain";
 
 const URGENCY_CLASS: Record<UrgencyLevel, string> = {
@@ -25,6 +26,7 @@ export function ZoneCard({ zone, urgency, onClick }: ZoneCardProps) {
     >
       <span className="dot" aria-hidden />
       <span className="zone-name">{zone.name}</span>
+      <span className="zone-status">{urgencyShortLabel(urgency)}</span>
     </button>
   );
 }

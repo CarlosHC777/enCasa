@@ -58,6 +58,8 @@ export interface TaskStatus {
   applicableToday: boolean;
   /** null when completed or not applicable — such tasks don't affect zone color. */
   urgency: UrgencyLevel | null;
+  /** Linear progress toward due (0 = just started, 1 = due/overdue). 0 when completed or not applicable. */
+  progress: number;
   state: TaskState;
   dueAt: Date | null;
   activeFrom: Date | null;

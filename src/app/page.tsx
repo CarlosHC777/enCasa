@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ZoneCard } from "@/components/ZoneCard";
 import { ZoneModal } from "@/components/ZoneModal";
+import { UrgencyLegend } from "@/components/UrgencyLegend";
 import { useActiveProfile } from "@/context/ProfileContext";
 import { completeTask } from "@/lib/data";
 import { logoutPin } from "@/lib/pinClient";
@@ -162,6 +163,8 @@ export default function HomePage() {
                 );
               })}
             </div>
+
+            <UrgencyLegend />
           </>
         )}
       </main>

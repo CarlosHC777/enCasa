@@ -5,14 +5,14 @@
   --color-text-muted: #6b6560;
   --color-border: #e4e0da;
 
-  --color-green: #4caf50;
-  --color-green-bg: #e5f6e6;
-  --color-yellow: #d8a400;
-  --color-yellow-bg: #fdf3d6;
-  --color-orange: #e2711d;
-  --color-orange-bg: #fce6d3;
-  --color-red: #d64545;
-  --color-red-bg: #fbe1e1;
+  --color-green: #2f8f3b;
+  --color-green-bg: #cfecd3;
+  --color-yellow: #b8860a;
+  --color-yellow-bg: #faeab8;
+  --color-orange: #cc5f14;
+  --color-orange-bg: #fad9bd;
+  --color-red: #c23636;
+  --color-red-bg: #f5cccc;
 }
 
 * {
@@ -263,11 +263,22 @@ button {
   border-radius: 50%;
 }
 
+.zone-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
 .zone-green {
   background: var(--color-green-bg);
 }
 .zone-green .dot {
   background: var(--color-green);
+}
+.zone-green .zone-status {
+  color: var(--color-green);
 }
 
 .zone-yellow {
@@ -276,6 +287,9 @@ button {
 .zone-yellow .dot {
   background: var(--color-yellow);
 }
+.zone-yellow .zone-status {
+  color: var(--color-yellow);
+}
 
 .zone-orange {
   background: var(--color-orange-bg);
@@ -283,12 +297,58 @@ button {
 .zone-orange .dot {
   background: var(--color-orange);
 }
+.zone-orange .zone-status {
+  color: var(--color-orange);
+}
 
 .zone-red {
   background: var(--color-red-bg);
 }
 .zone-red .dot {
   background: var(--color-red);
+}
+.zone-red .zone-status {
+  color: var(--color-red);
+}
+
+.dot-green {
+  background: var(--color-green);
+}
+.dot-yellow {
+  background: var(--color-yellow);
+}
+.dot-orange {
+  background: var(--color-orange);
+}
+.dot-red {
+  background: var(--color-red);
+}
+
+.urgency-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.urgency-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.urgency-legend-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 .modal-overlay {
@@ -376,9 +436,24 @@ button {
   opacity: 0.6;
 }
 
+.task-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.task-card-header .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .task-title {
   font-weight: 600;
-  margin: 0 0 4px;
+  margin: 0;
 }
 
 .task-meta {

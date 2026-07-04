@@ -47,6 +47,7 @@ src/
     ZoneModal.tsx        # modal con la lista de tareas de una zona
     TaskRow.tsx           # una tarea dentro del modal
     TaskForm.tsx           # formulario crear/editar tarea (usado en /tareas)
+    UrgencyLegend.tsx        # leyenda de colores del mapa (Bien/Próxima/Urgente/Vencida)
   context/
     ProfileContext.tsx   # perfil activo, persistido en localStorage
   hooks/
@@ -101,6 +102,25 @@ testear y razonar sobre ella.
 - El color de una **zona** es el peor color entre sus tareas pendientes
   aplicables hoy (rojo > naranja > amarillo > verde). Si no tiene tareas
   pendientes, la zona se muestra en verde.
+
+### Colores y etiquetas de estado
+
+Cada tarea/zona pasa de **verde → amarillo → naranja → rojo** según qué tan
+cerca está del límite (mientras más cerca de vencerse, peor el color). En la
+UI cada color tiene una etiqueta corta (mapa y leyenda) y una más
+descriptiva (dentro del modal de zona):
+
+| Color   | Etiqueta corta (zona) | Etiqueta larga (tarea)   |
+| ------- | ---------------------- | -------------------------- |
+| Verde   | Bien                   | Lejos del límite            |
+| Amarillo| Próxima                | Acercándose                 |
+| Naranja | Urgente                | Muy cerca del límite        |
+| Rojo    | Vencida                | Vencida                     |
+
+`src/lib/urgency.ts` expone `getUrgencyVisual(status)` (con `status`,
+`progress`, `isOverdue` y `label`) para que los componentes no dupliquen esta
+lógica. Una tarea completada hoy (o dentro de su ciclo) deja de afectar el
+color de su zona.
 
 ## Mapa de la casa (3 pisos)
 
