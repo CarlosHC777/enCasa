@@ -109,6 +109,7 @@ export function computeTaskStatus(
         completed,
         applicableToday,
         urgency: null,
+        progress: 0,
         state: completed ? "completed" : "pending",
         dueAt,
         activeFrom,
@@ -119,15 +120,17 @@ export function computeTaskStatus(
 
     const totalWindow = dueAt.getTime() - activeFrom.getTime();
     const elapsed = now.getTime() - activeFrom.getTime();
-    const progress = totalWindow > 0 ? elapsed / totalWindow : 1;
-    const urgency = urgencyFromProgress(Math.max(progress, 0));
+    const rawProgress = totalWindow > 0 ? elapsed / totalWindow : 1;
+    const clampedProgress = Math.min(Math.max(rawProgress, 0), 1);
+    const urgency = urgencyFromProgress(clampedProgress);
 
     return {
       task,
       completed: false,
       applicableToday,
       urgency,
-      state: progress >= 1 ? "overdue" : "pending",
+      progress: clampedProgress,
+      state: rawProgress >= 1 ? "overdue" : "pending",
       dueAt,
       activeFrom,
       lastCompletion,
@@ -156,6 +159,7 @@ export function computeTaskStatus(
       completed: completedForCycle,
       applicableToday,
       urgency: null,
+      progress: 0,
       state: completedForCycle ? "completed" : "pending",
       dueAt: null,
       activeFrom: null,
@@ -164,15 +168,17 @@ export function computeTaskStatus(
     };
   }
 
-  const progress = intervalDays > 0 ? effectiveDaysSince / intervalDays : 1;
-  const urgency = urgencyFromProgress(progress);
+  const rawProgress = intervalDays > 0 ? effectiveDaysSince / intervalDays : 1;
+  const clampedProgress = Math.min(Math.max(rawProgress, 0), 1);
+  const urgency = urgencyFromProgress(clampedProgress);
 
   return {
     task,
     completed: false,
     applicableToday,
     urgency,
-    state: progress >= 1 ? "overdue" : "pending",
+    progress: clampedProgress,
+    state: rawProgress >= 1 ? "overdue" : "pending",
     dueAt: null,
     activeFrom: null,
     lastCompletion,
@@ -185,6 +191,52 @@ export function computeZoneUrgency(statuses: TaskStatus[]): UrgencyLevel {
     .filter((s) => s.applicableToday && s.urgency !== null)
     .map((s) => s.urgency as UrgencyLevel);
   return worstUrgency(relevant) ?? "green";
+}
+
+/** Short label for zone cards and the map legend. */
+const URGENCY_SHORT_LABEL: Record<UrgencyLevel, string> = {
+  green: "Bien",
+  yellow: "Próxima",
+  orange: "Urgente",
+  red: "Vencida",
+};
+
+/** Longer, more descriptive label for individual tasks (e.g. in the zone modal). */
+const URGENCY_DETAIL_LABEL: Record<UrgencyLevel, string> = {
+  green: "Lejos del límite",
+  yellow: "Acercándose",
+  orange: "Muy cerca del límite",
+  red: "Vencida",
+};
+
+export function urgencyShortLabel(urgency: UrgencyLevel): string {
+  return URGENCY_SHORT_LABEL[urgency];
+}
+
+export function urgencyDetailLabel(urgency: UrgencyLevel): string {
+  return URGENCY_DETAIL_LABEL[urgency];
+}
+
+export interface UrgencyVisual {
+  status: UrgencyLevel;
+  progress: number;
+  isOverdue: boolean;
+  label: string;
+}
+
+/**
+ * Bundles a task's urgency into a single display-ready object. Returns null
+ * when the task has no active urgency (completed or not applicable today),
+ * since those don't need a color/label in the UI.
+ */
+export function getUrgencyVisual(status: TaskStatus): UrgencyVisual | null {
+  if (status.urgency === null) return null;
+  return {
+    status: status.urgency,
+    progress: status.progress,
+    isOverdue: status.state === "overdue",
+    label: urgencyDetailLabel(status.urgency),
+  };
 }
 
 export function formatTimeRemaining(status: TaskStatus, now: Date): string {
