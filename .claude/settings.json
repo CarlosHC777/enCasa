@@ -9,7 +9,14 @@
       "Bash(curl -s -o /dev/null -D - http://localhost:3000/icon.svg)",
       "Bash(curl -s -o /dev/null -D - http://localhost:3000/favicon.ico)",
       "Bash(curl -s http://localhost:3000/pin)",
-      "Bash(node verify-release.js)"
+      "Bash(node verify-release.js)",
+      "Bash(git -C /home/carlos/enCasa branch --show-current)",
+      "Bash(node -e ' *)",
+      "Bash(node verify-floors.js)",
+      "Bash(node verify-pasillo.js)",
+      "Bash(git -C /home/carlos/enCasa diff --stat src/app/globals.css)",
+      "Bash(node verify-escaleras.js)",
+      "Bash(node verify-notch.js)"
     ]
   }
 }

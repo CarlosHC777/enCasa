@@ -8,10 +8,11 @@ import { ZoneModal } from "@/components/ZoneModal";
 import { useActiveProfile } from "@/context/ProfileContext";
 import { completeTask } from "@/lib/data";
 import { logoutPin } from "@/lib/pinClient";
+import { DEFAULT_FLOOR_ID, FLOOR_PLANS, type FloorId } from "@/lib/floorPlans";
 import { computeTaskStatus, computeZoneUrgency } from "@/lib/urgency";
 import { useHouseData } from "@/hooks/useHouseData";
 import { useNow } from "@/hooks/useNow";
-import type { TaskStatus } from "@/types/domain";
+import type { TaskStatus, Zone } from "@/types/domain";
 
 export default function HomePage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function HomePage() {
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [activeFloorId, setActiveFloorId] = useState<FloorId>(DEFAULT_FLOOR_ID);
 
   useEffect(() => {
     if (ready && !activeProfileId) {
@@ -33,6 +35,19 @@ export default function HomePage() {
   const profilesById = useMemo(
     () => new Map(profiles.map((p) => [p.id, p])),
     [profiles]
+  );
+
+  const zonesById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
+
+  const activeFloor =
+    FLOOR_PLANS.find((floor) => floor.id === activeFloorId) ?? FLOOR_PLANS[0];
+
+  const visibleZones = useMemo(
+    () =>
+      activeFloor.zoneIds
+        .map((id) => zonesById.get(id))
+        .filter((zone): zone is Zone => Boolean(zone)),
+    [activeFloor, zonesById]
   );
 
   const completionsByTask = useMemo(() => {
@@ -117,20 +132,37 @@ export default function HomePage() {
         {actionError && <div className="status-banner error">{actionError}</div>}
 
         {!loading && !error && (
-          <div className="zone-map">
-            {zones.map((zone) => {
-              const statuses = statusesByZone.get(zone.id) ?? [];
-              const urgency = computeZoneUrgency(statuses);
-              return (
-                <ZoneCard
-                  key={zone.id}
-                  zone={zone}
-                  urgency={urgency}
-                  onClick={() => setSelectedZoneId(zone.id)}
-                />
-              );
-            })}
-          </div>
+          <>
+            <div className="floor-switcher" role="tablist" aria-label="Piso">
+              {FLOOR_PLANS.map((floor) => (
+                <button
+                  key={floor.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={floor.id === activeFloor.id}
+                  className={`floor-tab${floor.id === activeFloor.id ? " active" : ""}`}
+                  onClick={() => setActiveFloorId(floor.id)}
+                >
+                  {floor.label}
+                </button>
+              ))}
+            </div>
+
+            <div className={`zone-map zone-map--${activeFloor.id}`}>
+              {visibleZones.map((zone) => {
+                const statuses = statusesByZone.get(zone.id) ?? [];
+                const urgency = computeZoneUrgency(statuses);
+                return (
+                  <ZoneCard
+                    key={zone.id}
+                    zone={zone}
+                    urgency={urgency}
+                    onClick={() => setSelectedZoneId(zone.id)}
+                  />
+                );
+              })}
+            </div>
+          </>
         )}
       </main>
 
