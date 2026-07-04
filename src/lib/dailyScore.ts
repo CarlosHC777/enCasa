@@ -6,11 +6,12 @@ import type {
   TaskCompletion,
   TaskTemplate,
 } from "@/types/domain";
-import { computeTaskStatus } from "@/lib/urgency";
 import {
   buildDailyOccurrences,
+  everyNDaysDue,
   isDayApplicable,
   isSameLocalDay,
+  startOfDay,
 } from "@/lib/schedule";
 
 /**
@@ -23,8 +24,10 @@ import {
  *  - daily: una ocurrencia por cada horario de `due_times` (o 1 por `due_time`
  *    legacy). Las completions de hoy cubren ocurrencias 1 a 1, con tope en el
  *    número de ocurrencias (no cuentan de más).
- *  - every_n_days: 1 ocurrencia si la tarea vence/toca hoy (o fue completada
- *    hoy); si aún no toca, no cuenta para el día.
+ *  - every_n_days: 1 ocurrencia si la tarea vence hoy o está dentro de su
+ *    ventana de gracia de 1 día (o fue completada hoy). Si aún no toca, o si ya
+ *    pasó la gracia sin completarse, no cuenta para el día (deja de arrastrar el
+ *    score cada día). Una tarea nunca completada queda pendiente hasta hacerla.
  */
 export function taskOccurrencesToday(
   task: TaskTemplate,
@@ -53,16 +56,25 @@ export function taskOccurrencesToday(
     return today.map((o) => make(o.covered));
   }
 
-  // every_n_days
+  // every_n_days con ventana de gracia de 1 día.
   const completionsToday = completionsForTask.filter((c) =>
     isSameLocalDay(new Date(c.completed_at), now)
   );
-  if (completionsToday.length > 0) return [make(true)];
-  const status = computeTaskStatus(task, completionsForTask, now);
-  // `overdue` cubre "vence hoy" (daysSince === interval) y "vencida"
-  // (daysSince > interval), incluyendo tareas sin historial.
-  if (status.state === "overdue") return [make(false)];
-  return [];
+  if (completionsToday.length > 0) return [make(true)]; // completada hoy (incluye a tiempo o 1 día tarde)
+
+  const due = everyNDaysDue(task, completionsForTask, now);
+  if (!due) return [];
+
+  // Nunca completada: sigue pendiente cada día hasta la primera vez.
+  if (!due.hasHistory) return [make(false)];
+
+  // Cuenta como ocurrencia pendiente sólo si hoy es el día de vencimiento o su
+  // día de gracia; pasada la gracia sin completarse, deja de contar.
+  const startTodayMs = startOfDay(now).getTime();
+  const withinWindow =
+    startTodayMs >= startOfDay(due.dueDate).getTime() &&
+    now.getTime() < due.graceEndsAt.getTime();
+  return withinWindow ? [make(false)] : [];
 }
 
 /**

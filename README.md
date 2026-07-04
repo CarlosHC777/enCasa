@@ -122,6 +122,12 @@ testear y razonar sobre ella.
     (progreso = 1) para que no quede "escondida" indefinidamente.
   - Se considera completada para el ciclo actual si la última completion fue
     hoy mismo.
+  - **Ventana de gracia de 1 día para el score** (análoga a las 2 h de las
+    diarias): la ocurrencia cuenta en el score el **día de vencimiento** y el
+    **día siguiente** de gracia. Si se completa dentro de esos dos días cuenta
+    como hecha; si pasa la gracia sin completarse, deja de arrastrar el score
+    cada día (la tarea sigue en rojo en el mapa/tablero hasta que se haga). Ver
+    "Ventana de gracia" más abajo.
 - El color de una **zona** es el peor color entre sus tareas pendientes
   aplicables hoy (rojo > naranja > amarillo > verde). Si no tiene tareas
   pendientes, la zona se muestra en verde.
@@ -223,6 +229,20 @@ está cubierta; si su gracia expiró sin cubrirse, cuenta en el total pero no en
 las completadas (ocurrencia perdida). Una completion cuenta para el día de
 `covered_due_at` si existe; si es `null`, se usa `completed_at` (legacy). Una
 misma completion cubre a lo sumo una ocurrencia, así que nunca se cuenta de más.
+
+### Ventana de gracia de `every_n_days` (1 día)
+
+Las tareas `every_n_days` tienen la misma idea con **1 día de gracia**
+(`EVERY_N_GRACE_DAYS` en `src/lib/schedule.ts`, helper `everyNDaysDue`): el
+vencimiento es `interval_days` después de la última completion (o desde
+`created_at` si nunca se ha hecho), y la ocurrencia es completable/contable el
+**día de vencimiento** y el **día siguiente**. Completarla dentro de esos dos
+días cuenta como hecha para el score; pasada la gracia sin completarse, la
+ocurrencia deja de contar en el score de los días siguientes (para no arrastrar
+el score indefinidamente), aunque la tarea siga mostrándose en rojo en el mapa y
+en `/mi-tablero` hasta que alguien la complete. Estas completions no usan
+`covered_due_at` (queda `null`); el score se calcula por `completed_at` y por el
+vencimiento del ciclo.
 
 ## Mi tablero (`/mi-tablero`)
 
