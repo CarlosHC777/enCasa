@@ -48,7 +48,7 @@ button {
 
 .container {
   width: 100%;
-  max-width: 860px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 16px;
 }
@@ -135,38 +135,80 @@ button {
   color: white;
 }
 
-.zone-map {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+/* Controles de zoom del mapa (sólo afectan al mapa). */
+.map-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 12px;
 }
 
-@media (min-width: 560px) {
-  .zone-map {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.map-zoom-button,
+.map-zoom-reset {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Desktop: cada piso se acomoda como su propio plano de casa. */
-@media (min-width: 860px) {
-  .container {
-    max-width: 960px;
-  }
+.map-zoom-button {
+  width: 38px;
+  height: 38px;
+  font-size: 1.3rem;
+  line-height: 1;
+}
 
-  .zone-map {
-    gap: 6px;
-  }
+.map-zoom-reset {
+  height: 38px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+}
 
-  .zone-map .zone-card {
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-    padding: 10px 8px;
-  }
+.map-zoom-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 
-  /* Planta baja */
-  .zone-map--planta-baja {
+.map-zoom-value {
+  min-width: 52px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/*
+ * El mapa mantiene una distribución fija (misma en móvil y desktop). Se
+ * envuelve en un viewport con scroll propio para que el desplazamiento
+ * quede contenido y no genere overflow horizontal en toda la página.
+ */
+.zone-map-viewport {
+  margin-top: 12px;
+  max-width: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 14px;
+}
+
+.zone-map {
+  display: grid;
+  gap: 6px;
+  width: 880px;
+}
+
+.zone-map .zone-card {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 10px 8px;
+}
+
+/* Cada piso se acomoda como su propio plano de casa (en todos los tamaños). */
+/* Planta baja */
+.zone-map--planta-baja {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-rows: 100px 200px;
     grid-template-areas:
@@ -232,13 +274,11 @@ button {
   .zone-map--piso-2 .zone-card[data-zone="escaleras-p2"] .zone-name {
     font-size: 0.75rem;
   }
-}
 
 .zone-card {
   border: 1px solid var(--color-border);
   border-radius: 14px;
-  padding: 22px 14px;
-  min-height: 112px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -469,6 +509,11 @@ button {
   font-weight: 600;
 }
 
+.task-due {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 .complete-button {
   background: var(--color-text);
   color: white;
@@ -684,6 +729,57 @@ button {
   font-size: 1rem;
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+.due-times-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.due-times-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.due-times-input .button-secondary {
+  white-space: nowrap;
+}
+
+.due-times-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 6px 0 0;
+}
+
+.due-times-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.due-time-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.due-time-chip button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  padding: 0 2px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .form-row {

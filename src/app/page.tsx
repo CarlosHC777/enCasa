@@ -26,6 +26,15 @@ export default function HomePage() {
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [activeFloorId, setActiveFloorId] = useState<FloorId>(DEFAULT_FLOOR_ID);
+  const [mapZoom, setMapZoom] = useState(1);
+
+  const MAP_ZOOM_MIN = 0.4;
+  const MAP_ZOOM_MAX = 2;
+  const zoomOut = () =>
+    setMapZoom((z) => Math.max(MAP_ZOOM_MIN, Math.round((z - 0.1) * 10) / 10));
+  const zoomIn = () =>
+    setMapZoom((z) => Math.min(MAP_ZOOM_MAX, Math.round((z + 0.1) * 10) / 10));
+  const resetZoom = () => setMapZoom(1);
 
   useEffect(() => {
     if (ready && !activeProfileId) {
@@ -149,19 +158,51 @@ export default function HomePage() {
               ))}
             </div>
 
-            <div className={`zone-map zone-map--${activeFloor.id}`}>
-              {visibleZones.map((zone) => {
-                const statuses = statusesByZone.get(zone.id) ?? [];
-                const urgency = computeZoneUrgency(statuses);
-                return (
-                  <ZoneCard
-                    key={zone.id}
-                    zone={zone}
-                    urgency={urgency}
-                    onClick={() => setSelectedZoneId(zone.id)}
-                  />
-                );
-              })}
+            <div className="map-controls" role="group" aria-label="Zoom del mapa">
+              <button
+                type="button"
+                className="map-zoom-button"
+                onClick={zoomOut}
+                disabled={mapZoom <= MAP_ZOOM_MIN}
+                aria-label="Alejar"
+              >
+                −
+              </button>
+              <span className="map-zoom-value" aria-live="polite">
+                {Math.round(mapZoom * 100)}%
+              </span>
+              <button
+                type="button"
+                className="map-zoom-button"
+                onClick={zoomIn}
+                disabled={mapZoom >= MAP_ZOOM_MAX}
+                aria-label="Acercar"
+              >
+                +
+              </button>
+              <button type="button" className="map-zoom-reset" onClick={resetZoom}>
+                100%
+              </button>
+            </div>
+
+            <div className="zone-map-viewport">
+              <div
+                className={`zone-map zone-map--${activeFloor.id}`}
+                style={{ zoom: mapZoom }}
+              >
+                {visibleZones.map((zone) => {
+                  const statuses = statusesByZone.get(zone.id) ?? [];
+                  const urgency = computeZoneUrgency(statuses);
+                  return (
+                    <ZoneCard
+                      key={zone.id}
+                      zone={zone}
+                      urgency={urgency}
+                      onClick={() => setSelectedZoneId(zone.id)}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
             <UrgencyLegend />

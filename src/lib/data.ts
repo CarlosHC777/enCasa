@@ -26,7 +26,7 @@ export async function fetchZones(): Promise<Zone[]> {
 }
 
 const TASK_TEMPLATE_COLUMNS =
-  "id, zone_id, title, assigned_to, recurrence_type, due_time, active_from, interval_days, active_days, enabled";
+  "id, zone_id, title, assigned_to, recurrence_type, due_times, due_time, active_from, interval_days, active_days, enabled, created_at";
 
 export async function fetchTaskTemplates(): Promise<TaskTemplate[]> {
   const { data, error } = await supabase
@@ -48,7 +48,11 @@ export async function fetchAllTaskTemplates(): Promise<TaskTemplate[]> {
   return data ?? [];
 }
 
-export type TaskTemplateInput = Omit<TaskTemplate, "id" | "enabled">;
+// `created_at` lo gestiona la base (default now()); no se envía desde el cliente.
+export type TaskTemplateInput = Omit<
+  TaskTemplate,
+  "id" | "enabled" | "created_at"
+>;
 
 export async function createTaskTemplate(
   id: string,

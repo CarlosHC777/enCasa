@@ -71,6 +71,7 @@ sql/
   patch-task-template-write-policies.sql          # habilita insert/update de task_templates
   patch-add-floor-zones.sql                       # agrega las zonas de 1er/2do piso
   patch-add-escaleras-servicio-piso1.sql            # agrega la escalera de servicio del 1er piso
+  patch-task-due-times.sql                        # agrega due_times[] y created_at (horarios múltiples)
 ```
 
 La lógica de urgencia vive completamente en `src/lib/urgency.ts` como
@@ -82,17 +83,30 @@ testear y razonar sobre ella.
 - `profiles`: perfiles simbólicos (id, name).
 - `zones`: zonas de la casa (id, name, sort_order).
 - `task_templates`: definición recurrente de una tarea (zona, a quién está
-  asignada, tipo de recurrencia, horarios/intervalo).
+  asignada, tipo de recurrencia, horarios/intervalo). Para tareas diarias, los
+  horarios de vencimiento viven en `due_times text[]` (fuente de verdad);
+  `due_time`/`active_from` quedan como legacy. `created_at` marca desde cuándo
+  cuentan sus vencimientos.
 - `task_completions`: cada vez que alguien marca una tarea como hecha, se
   inserta un registro con quién y cuándo.
 
 ### Reglas de urgencia (resumen)
 
-- **daily** con `active_from` y `due_time`: se calcula un progreso lineal
-  entre esas dos horas del día actual.
-  - `< 0.5` → verde · `< 0.75` → amarillo · `< 1` → naranja · `>= 1` → rojo
-  - Se considera completada si existe una `task_completion` con
-    `completed_at` de hoy.
+- **daily** con **horarios múltiples de vencimiento** (`due_times`): una tarea
+  diaria puede vencer varias veces al día (ej. `09:00`, `18:00`, `22:00`).
+  - Modelo de "slots": partiendo de `created_at` (anchor), se generan los
+    vencimientos programados respetando `active_days`. Cada `task_completion`
+    consume un vencimiento y avanza al siguiente horario configurado.
+  - El progreso hacia el vencimiento pendiente da el color:
+    `< 0.5` → verde · `< 0.75` → amarillo · `< 1` → naranja · `>= 1` → rojo.
+  - **Vencida hasta completar**: el tiempo por sí solo nunca avanza el slot,
+    así que una tarea que pasó su hora de vencimiento **permanece roja** hasta
+    que alguien presiona "Completar". Al completar, avanza al siguiente
+    horario (ej. si vencía 09:00 y se completa 09:35, el próximo es 18:00; si
+    se completa después de las 22:00, el próximo es el siguiente día activo a
+    las 09:00).
+  - No hay crash con tareas legacy: si no hay `due_times` se usa `due_time`
+    como único horario; si no hay ninguno, la tarea se muestra en verde.
 - **every_n_days**: se calculan los días desde la última `task_completion` y
   se compara contra `interval_days` con los mismos umbrales de progreso.
   - Si nunca se ha completado, se asume que la tarea está totalmente vencida
@@ -118,16 +132,15 @@ descriptiva (dentro del modal de zona):
 | Rojo    | Vencida                | Vencida                     |
 
 `src/lib/urgency.ts` expone `getUrgencyVisual(status)` (con `status`,
-`progress`, `isOverdue` y `label`) para que los componentes no dupliquen esta
-lógica. Una tarea completada hoy (o dentro de su ciclo) deja de afectar el
-color de su zona.
+`progress`, `isOverdue`, `label`, `shortLabel`, `nextDueAt` y `overdueSince`)
+para que los componentes no dupliquen esta lógica. Una tarea `every_n_days`
+completada hoy (o dentro de su ciclo) deja de afectar el color de su zona.
 
 ## Mapa de la casa (3 pisos)
 
 El mapa (`/`) tiene un selector para cambiar entre tres vistas — **Planta
 baja**, **1er piso** y **2do piso** —, cada una con su propio plano tipo
-casa en desktop (grid con áreas nombradas) y una cuadrícula simple de cards
-en móvil. La configuración de qué zonas pertenecen a cada piso y en qué
+casa (grid con áreas nombradas). La configuración de qué zonas pertenecen a cada piso y en qué
 orden vive en `src/lib/floorPlans.ts`; el layout visual (quién es grande,
 quién va arriba/abajo) vive en `globals.css` (clases `.zone-map--planta-baja`,
 `.zone-map--piso-1`, `.zone-map--piso-2`).
@@ -152,6 +165,17 @@ quién va arriba/abajo) vive en `globals.css` (clases `.zone-map--planta-baja`,
 Si agregas una zona nueva directamente en Supabase sin agregarla también a
 `src/lib/floorPlans.ts`, aparecerá en `/tareas` y `/historial` pero no en
 ningún plano del mapa — es una limitación conocida, no un bug.
+
+### Mapa fijo con zoom
+
+El mapa **mantiene la misma distribución en móvil y en desktop** (no cambia a
+lista ni a otra cuadrícula en pantallas chicas). Para adaptarse a pantallas
+pequeñas, el mapa vive dentro de un contenedor con scroll propio
+(`.zone-map-viewport`) y tiene controles de **zoom** (−, porcentaje, +, y
+reset a 100%). El zoom afecta únicamente al mapa (no al header ni al resto de
+la app) y el desplazamiento queda contenido en su contenedor, sin generar
+overflow horizontal en toda la página. Las zonas siguen siendo clickeables y
+conservan sus colores/etiquetas de urgencia a cualquier nivel de zoom.
 
 ## Requisitos previos
 
@@ -189,6 +213,11 @@ ningún plano del mapa — es una limitación conocida, no un bug.
    - `patch-add-escaleras-servicio-piso1.sql` — agrega la escalera
      secundaria/de servicio del 1er piso (junto a Cuarto Carlitos), aparte
      de la escalera principal (`escaleras-p1`, junto a Librero).
+   - `patch-task-due-times.sql` — **necesario para la versión con horarios
+     múltiples**. Agrega `due_times text[]` y `created_at timestamptz` a
+     `task_templates` y migra los datos actuales (`due_times = array[due_time]`).
+     La app espera estas columnas; si no corres este patch en una base
+     existente, la carga del mapa/tareas fallará. Es idempotente.
 
 3. Copiar el archivo de variables de entorno de ejemplo:
 
