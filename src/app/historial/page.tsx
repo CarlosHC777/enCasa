@@ -90,6 +90,9 @@ export default function HistorialPage() {
           <Link href="/" className="link-button">
             Volver al mapa
           </Link>
+          <Link href="/score" className="link-button">
+            Score
+          </Link>
           <Link href="/tareas" className="link-button">
             Administrar tareas
           </Link>

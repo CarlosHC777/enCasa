@@ -104,6 +104,9 @@ export default function TareasPage() {
           <Link href="/" className="link-button">
             Volver al mapa
           </Link>
+          <Link href="/score" className="link-button">
+            Score
+          </Link>
           <Link href="/historial" className="link-button">
             Historial
           </Link>

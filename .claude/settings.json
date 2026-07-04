@@ -20,7 +20,8 @@
       "Bash(npx tsc *)",
       "Bash(rm -rf /tmp/claude-1000/-home-carlos-enCasa/8ee7833b-a969-403e-82cf-62768621d735/scratchpad/encasa-build-duetimes)",
       "Bash(rsync -a --exclude node_modules --exclude .next --exclude .git /home/carlos/enCasa/ /tmp/claude-1000/-home-carlos-enCasa/8ee7833b-a969-403e-82cf-62768621d735/scratchpad/encasa-build-duetimes/)",
-      "Bash(ln -s /home/carlos/enCasa/node_modules /tmp/claude-1000/-home-carlos-enCasa/8ee7833b-a969-403e-82cf-62768621d735/scratchpad/encasa-build-duetimes/node_modules)"
+      "Bash(ln -s /home/carlos/enCasa/node_modules /tmp/claude-1000/-home-carlos-enCasa/8ee7833b-a969-403e-82cf-62768621d735/scratchpad/encasa-build-duetimes/node_modules)",
+      "Bash(grep -n \"| \\\\`/\" /home/carlos/enCasa/README.md)"
     ]
   }
 }

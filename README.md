@@ -36,6 +36,7 @@ src/
     layout.tsx        # layout raíz, envuelve todo en ProfileProvider
     page.tsx           # pantalla principal (mapa de zonas)
     login/page.tsx      # selección de perfil
+    score/page.tsx        # score diario en barras de progreso
     tareas/page.tsx      # panel de administración de tareas
     historial/page.tsx    # historial de tareas completadas
     pin/page.tsx           # pantalla de PIN familiar
@@ -48,18 +49,22 @@ src/
     TaskRow.tsx           # una tarea dentro del modal
     TaskForm.tsx           # formulario crear/editar tarea (usado en /tareas)
     UrgencyLegend.tsx        # leyenda de colores del mapa (Bien/Próxima/Urgente/Vencida)
+    Clock.tsx                 # reloj visible (hora + fecha) en la pantalla principal
+    DailyScoreBoard.tsx        # score diario (casa + personas) en barras de progreso
   context/
     ProfileContext.tsx   # perfil activo, persistido en localStorage
   hooks/
     useHouseData.ts      # fetch de zonas, perfiles, tareas y completions
     useTaskAdminData.ts   # fetch de zonas, perfiles y TODAS las tareas (para /tareas)
     useTaskHistory.ts      # fetch del historial de completions (para /historial)
+    useDailyScore.ts        # deriva el score diario de los datos ya cargados
     useNow.ts             # reloj que se actualiza cada minuto
   lib/
     supabaseClient.ts     # cliente de Supabase
     data.ts                 # funciones de acceso a datos (fetch/insert/update)
     slug.ts                   # genera el id de una tarea nueva a partir de zona+título
     urgency.ts               # funciones puras: cálculo de estado/urgencia/color
+    dailyScore.ts             # funciones puras: ocurrencias y score diario
     pinAuth.ts                 # cookie/HMAC del PIN (compartido por API routes y middleware)
     pinClient.ts                 # helper de cliente para cerrar la sesión de PIN
     floorPlans.ts                 # qué zonas van en cada piso del selector del mapa
@@ -135,6 +140,54 @@ descriptiva (dentro del modal de zona):
 `progress`, `isOverdue`, `label`, `shortLabel`, `nextDueAt` y `overdueSince`)
 para que los componentes no dupliquen esta lógica. Una tarea `every_n_days`
 completada hoy (o dentro de su ciclo) deja de afectar el color de su zona.
+
+## Score diario y reloj
+
+La pantalla principal (`/`) muestra un **reloj** (hora + fecha, se actualiza
+cada minuto vía el hook `useNow`). El **score diario** vive en su propia ruta
+**`/score`** (enlazada desde el header de todas las pantallas): muestra el
+progreso por persona y de toda la casa como **barras de progreso de colores**,
+calculado para el **día local del navegador**.
+
+El cálculo es una función pura en `src/lib/dailyScore.ts`
+(`calculateDailyScore`), derivada de los datos ya cargados por `useHouseData`
+(no hace consultas extra ni crea tablas). El hook `src/hooks/useDailyScore.ts`
+lo memoiza.
+
+### Cómo se calcula
+
+Se generan las **ocurrencias de vencimiento del día** de cada tarea `enabled`
+y con responsable (`assigned_to` no null):
+
+- **daily**: una ocurrencia por cada horario de `due_times` (o 1 por
+  `due_time` legacy). Si hoy no es día activo (`active_days`), la tarea no
+  genera ocurrencias. Ejemplo: `due_times = ["09:00","18:00","22:00"]` cuenta
+  como **3 ocurrencias** del día.
+- **every_n_days**: **1 ocurrencia** si la tarea vence o toca hoy (o fue
+  completada hoy); si aún no toca, no cuenta para el día. "Toca/vence hoy" se
+  determina reutilizando `computeTaskStatus` (`state === "overdue"`, que cubre
+  también las tareas sin historial).
+
+Luego, por persona: `completadas / asignadas` del día. Reglas:
+
+- Las completions de **hoy** cubren ocurrencias 1 a 1, con **tope** en el
+  número de ocurrencias (5 completions sobre una tarea de 3 ocurrencias
+  cuentan como 3, no 5).
+- Una ocurrencia cuenta como completada para el **responsable asignado**
+  aunque la haya completado otra persona. En `/historial` se sigue mostrando
+  quién la completó realmente.
+- El score de la **casa** es la suma de las ocurrencias de todas las personas.
+- Si una persona no tiene ocurrencias hoy (`totalAssignedToday = 0`) se
+  muestra **"Sin tareas para hoy"** en vez de un porcentaje.
+- Tareas **desactivadas** o **sin responsable** no cuentan para el score.
+
+### Reinicio automático por día
+
+El score **no borra ni modifica** `task_completions`: se recalcula en cada
+render filtrando las completions al día local actual. Al cambiar de día (el
+reloj cruza medianoche y `useNow` actualiza la fecha), las completions de ayer
+dejan de contar y el score arranca de cero automáticamente, sin perder
+historial.
 
 ## Mapa de la casa (3 pisos)
 
@@ -288,6 +341,7 @@ Para que alguien que abra la URL sin conocer el PIN no vea nada de la app,
 | `/pin`        | Candado de PIN familiar; sin cookie válida, todo lo demás redirige aquí |
 | `/login`      | Selección de perfil simbólico (Papá Angel, Mamá Lau, Paulina, Carlitos) |
 | `/`           | Mapa de la casa por zonas, con modal de tareas por zona           |
+| `/score`      | Score diario (casa y por persona) en barras de progreso de colores |
 | `/tareas`     | Crear, editar, desactivar y reactivar tareas                      |
 | `/historial`  | Últimas 50 tareas completadas, con filtros por persona y zona     |
 
